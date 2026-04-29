@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+{% block title %}Daily Quotes{% endblock %}
+{% block page_title %}Daily Inspiration Quotes{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-chat-quote-fill me-2"></i>Daily Inspiration Quotes</h4>
+        <nav aria-label="breadcrumb"><ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard:index' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'accounts:system_settings' %}">Settings</a></li>
+            <li class="breadcrumb-item active">Daily Quotes</li>
+        </ol></nav>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'accounts:quotes_template' %}" class="btn btn-outline-success btn-sm">
+            <i class="bi bi-download me-1"></i>Download Template
+        </a>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="stat-card bg-gradient-blue">
+            <div class="stat-icon"><i class="bi bi-chat-quote-fill"></i></div>
+            <div class="stat-value">{{ total }}</div>
+            <div class="stat-label">Total Quotes</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card bg-gradient-purple">
+            <div class="stat-icon"><i class="bi bi-calendar-check"></i></div>
+            <div class="stat-value">365</div>
+            <div class="stat-label">Days in Year</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card bg-gradient-green">
+            <div class="stat-icon"><i class="bi bi-check-circle"></i></div>
+            <div class="stat-value">{{ total }}</div>
+            <div class="stat-label">Imported</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card bg-gradient-orange">
+            <div class="stat-icon"><i class="bi bi-sun"></i></div>
+            <div class="stat-value">{% if today_quote %}✓{% else %}—{% endif %}</div>
+            <div class="stat-label">Today's Quote</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Import -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header fw-bold"><i class="bi bi-upload me-2 text-primary"></i>Import Quotes</div>
+            <div class="card-body">
+                <div class="alert alert-info border-0" style="font-size:12px;">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Excel format: <strong>Column A</strong> = Day (1-365), <strong>Column B</strong> = Quote, <strong>Column C</strong> = Author
+                </div>
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="import_quotes">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Select Excel File (.xlsx)</label>
+                        <input type="file" name="quotes_file" class="form-control" accept=".xlsx,.xls" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-upload me-2"></i>Import Quotes
+                    </button>
+                </form>
+                <hr>
+                <form method="post" onsubmit="return confirm('Delete ALL quotes? This cannot be undone.')">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete_all">
+                    <button type="submit" class="btn btn-danger w-100">
+                        <i class="bi bi-trash3 me-2"></i>Delete All Quotes
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        {% if today_quote %}
+        <div class="card mt-3" style="border-left:4px solid #7b4bb3;">
+            <div class="card-header fw-bold" style="color:#7b4bb3;"><i class="bi bi-sun me-2"></i>Today's Quote (Day {{ today_quote.day_number }})</div>
+            <div class="card-body">
+                <blockquote class="mb-0">
+                    <p style="font-size:14px;font-style:italic;color:#2d3748;">"{{ today_quote.quote }}"</p>
+                    {% if today_quote.author %}<footer class="text-muted" style="font-size:12px;">— {{ today_quote.author }}</footer>{% endif %}
+                </blockquote>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- All Quotes Table -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header fw-bold d-flex align-items-center justify-content-between">
+                <span><i class="bi bi-list-ul me-2"></i>All Quotes ({{ total }} / 365)</span>
+            </div>
+            <div class="card-body p-0" style="max-height:600px;overflow-y:auto;">
+                <table class="table table-sm table-hover mb-0">
+                    <thead style="position:sticky;top:0;z-index:1;">
+                        <tr>
+                            <th style="width:55px;">Day</th>
+                            <th>Quote</th>
+                            <th style="width:140px;">Author</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for q in quotes %}
+                        <tr {% if today_quote and q.day_number == today_quote.day_number %}style="background:#f3e8ff;"{% endif %}>
+                            <td class="text-center fw-bold" style="color:#7b4bb3;">
+                                {{ q.day_number }}
+                                {% if today_quote and q.day_number == today_quote.day_number %}
+                                <span class="badge ms-1" style="background:#7b4bb3;font-size:9px;">TODAY</span>
+                                {% endif %}
+                            </td>
+                            <td style="font-size:12px;">{{ q.quote }}</td>
+                            <td style="font-size:12px;color:#718096;">{{ q.author|default:"—" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="3" class="text-center text-muted py-5">
+                            <i class="bi bi-chat-quote display-6 d-block mb-2 text-muted"></i>
+                            No quotes imported yet.<br>
+                            <small>Download the template and import your 365 quotes.</small>
+                        </td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
