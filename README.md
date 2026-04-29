@@ -1,8 +1,8 @@
-# gate_pass_system
+
 "# ERP-System" 
 
-# Unity Cement ERP System — Blueprint
-**Organization:** Unity Cement | **Standard:** ISO 45001:2018  
+# ERP System — Blueprint
+**Organization:** Cement Industry | **Standard:** ISO 45001:2018  
 **Stack:** Django 4.2.7 · Python 3.13 · MySQL · Bootstrap 5
 **Last Updated:** 2025  
 **Server:** LAN — `http://192.168.113.161:8000`
