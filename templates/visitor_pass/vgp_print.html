@@ -1,0 +1,153 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Visitor Pass — {{ vgp.pass_number }}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 11px; color: #000; background: #fff; }
+  .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 12mm; }
+
+  .pass-card { border: 2px solid #000; padding: 10px 14px; }
+
+  /* Header */
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .header-title { flex: 1; text-align: center; }
+  .header-title h2 { font-size: 20px; font-weight: bold; letter-spacing: 0.5px; }
+  .header-logo { width: 140px; text-align: left; display: flex; align-items: center; justify-content: center;}
+  .header-logo img { height: 75px; object-fit: contain; align-items: center; justify-content: center; }
+
+  /* Visitor Pass subtitle */
+  .vp-subtitle { text-align: center; font-size: 20px; font-weight: bold; margin: 6px 0 8px; border-bottom: 2px solid #000; padding-bottom: 6px; }
+
+  /* Main body: table + photo */
+  .body-row { display: flex; gap: 0; margin-bottom: 0; }
+  .info-side { flex: 1; }
+  .photo-side { width: 70mm; border-left: none; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .photo-side img { width: 70mm; height: 70mm; object-fit: cover; display: block; }
+  .photo-placeholder { width: 70mm; height: 70mm; background: #3d3d3d; display: flex; align-items: center; justify-content: center; }
+  .photo-placeholder svg { width: 34mm; height: 34mm; fill: #b0b0b0; }
+
+  /* Info table */
+  table.info { width: 90%; border-collapse: collapse; }
+  table.info td { border: 1px solid #000; padding: 4px 7px; vertical-align: middle; }
+  table.info td.lbl { font-weight: bold; white-space: nowrap; width: 38%; }
+  table.info td.val { width: 150%; }
+
+  /* Checkbox */
+  .chk { display: inline-flex; align-items: center; gap: 3px; margin-right: 12px; }
+  .chk-box { width: 11px; height: 11px; border: 1px solid #000; display: inline-flex; align-items: center; justify-content: center; font-size: 8px; flex-shrink: 0; }
+
+  /* Footer quote */
+  .footer-quote { text-align: center; font-style: italic; font-weight: bold; font-size: 11px; margin: 10px 0 8px; }
+
+  /* Signature row */
+  .sig-row { display: flex; justify-content: space-between; margin-top: 30px; }
+  .sig-col { text-align: center; width: 33%; }
+  .sig-col .sig-label { font-weight: bold; font-size: 12px; }
+  .sig-col .sig-name { font-size: 10px; color: #333; font-weight: bold; margin-bottom: 4px; }
+
+  .no-print { display: block; }
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-print { display: none !important; }
+    @page { size: A4; margin: 12mm; }
+    .page { padding: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Print Button -->
+  <div class="no-print" style="text-align:right;margin-bottom:8px;">
+    <button onclick="window.print()" style="padding:6px 16px;background:#1e3a5f;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">🖨 Print / Save PDF</button>
+    <button onclick="window.history.back()" style="padding:6px 16px;background:#6b7280;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;margin-left:6px;">✕ Close</button>
+  </div>
+
+  <div class="pass-card">
+
+    <!-- Header -->
+    <div class="header">
+      <div style="width:120px;"></div>
+      <div class="header-title">
+        <h2>PMC CEMENT LIMITED</h2>
+      </div>
+      <div class="header-logo">
+        <img src="{% static 'images/Unity_Logo_Horizontal.png' %}" alt="Unity Cement">
+      </div>
+    </div>
+
+    <!-- Visitor Pass subtitle -->
+    <div class="vp-subtitle">Visitor Pass</div>
+
+    <!-- Body: info table + photo -->
+    <div class="body-row">
+      <div class="info-side">
+        <table class="info">
+          <tr><td class="lbl">Request ID :</td><td class="val">{{ vgp.pass_number }}</td></tr>
+          <tr><td class="lbl">Date :</td><td class="val">{{ date_str }}</td></tr>
+          <tr><td class="lbl">Visitor's Name :</td><td class="val">{{ vgp.visitor_name }}</td></tr>
+          <tr><td class="lbl">Visitor Mobile No. :</td><td class="val">{{ vgp.visitor_phone }}</td></tr>
+          <tr><td class="lbl">Organization :</td><td class="val">{{ vgp.visitor_company|default:"—" }}</td></tr>
+          <tr><td class="lbl">City :</td><td class="val">{{ vgp.visitor_city|default:"—" }}</td></tr>
+          <tr><td class="lbl">Material :</td><td class="val">{{ vgp.material|default:"—" }}</td></tr>
+          <tr>
+            <td class="lbl">Material Category :</td>
+            <td class="val">
+              <span class="chk"><span class="chk-box">{% if vgp.material_category == 'non_returnable' %}✓{% endif %}</span> Non - Returnable</span>
+              <span class="chk"><span class="chk-box">{% if vgp.material_category == 'returnable' %}✓{% endif %}</span> Returnable</span>
+            </td>
+          </tr>
+          <tr><td class="lbl">Purpose :</td><td class="val">{{ vgp.get_visit_purpose_display }}</td></tr>
+          <tr><td class="lbl">Access Card No. :</td><td class="val">{{ vgp.access_card_no|default:"—" }}</td></tr>
+              <!-- Contact table -->
+    <table class="info" style="margin-top:0;">
+      <tr><td class="lbl">Contact person :</td><td class="val">{{ vgp.person_to_meet.employee_name }}</td></tr>
+      <tr><td class="lbl">In time :</td><td class="val">{{ in_time }}</td></tr>
+      <tr><td class="lbl">Out time :</td><td class="val">{{ out_time }}</td></tr>
+    </table>
+        </table>
+      </div>
+      <div class="photo-side">
+        {% if vgp.visitor_photo %}
+          <img src="{{ vgp.visitor_photo.url }}" alt="Visitor Photo">
+        {% else %}
+          <div class="photo-placeholder">
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="50" cy="34" r="22"/>
+              <ellipse cx="50" cy="84" rx="34" ry="20"/>
+            </svg>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+
+
+    <!-- Footer quote -->
+    <div class="footer-quote">
+      "We hope you had a pleasant experience. We look forward to welcoming you again."
+    </div>
+
+    <!-- Signatures -->
+    <div class="sig-row">
+      <div class="sig-col">
+        <div class="sig-name" style="font-size:10px;color:#555;">{{ vgp.created_by.employee_name|default:"" }}</div>
+        <div class="sig-label">Security Sign</div>
+      </div>
+      <div class="sig-col">
+        <div class="sig-name" style="font-size:10px;color:#555;">{{ vgp.visitor_name }}</div>
+        <div class="sig-label">Visitor Sign</div>
+      </div>
+      <div class="sig-col">
+        <div class="sig-name" style="font-size:10px;color:#555;">{{ vgp.person_to_meet.employee_name|default:"" }}</div>
+        <div class="sig-label">Employee Sign</div>
+      </div>
+    </div>
+
+  </div><!-- /.pass-card -->
+</div><!-- /.page -->
+</body>
+</html>

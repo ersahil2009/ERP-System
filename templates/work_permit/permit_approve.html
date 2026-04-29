@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Approve / Reject — {{ permit.permit_number }}{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:600px">
+  <div class="d-flex align-items-center mb-3 gap-3">
+    <a href="{% url 'work_permit:detail' permit.pk %}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <h5 class="mb-0 fw-bold">Approval Action — {{ permit.permit_number }}</h5>
+  </div>
+
+  <!-- Approval Stage Indicator -->
+  {% if stage %}
+  <div class="alert alert-info small mb-3">
+    <i class="bi bi-info-circle me-2"></i>
+    <strong>Stage {{ stage.stage|add:1 }} of {{ stages.count }}:</strong> {{ stage.stage_label }}
+    {% if stage.approver_dept %} &mdash; Dept: <strong>{{ stage.approver_dept }}</strong>{% endif %}
+    {% if is_admin %}<span class="badge bg-warning text-dark ms-2">Administrator Acting</span>{% endif %}
+  </div>
+  {% endif %}
+
+  {% if stages %}
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white border-bottom fw-semibold small"><i class="bi bi-diagram-3 me-1"></i>Workflow Progress</div>
+    <div class="card-body p-2">
+      {% for s in stages %}
+      <div class="d-flex align-items-center gap-2 py-1 {% if not forloop.last %}border-bottom{% endif %}">
+        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0
+          {% if s.status == 'approved' %}bg-success text-white
+          {% elif s.status == 'rejected' %}bg-danger text-white
+          {% elif stage and s.pk == stage.pk %}bg-primary text-white
+          {% else %}bg-light text-muted{% endif %}"
+             style="width:24px;height:24px;font-size:.7rem;">
+          {% if s.status == 'approved' %}<i class="bi bi-check-lg"></i>
+          {% elif s.status == 'rejected' %}<i class="bi bi-x-lg"></i>
+          {% elif stage and s.pk == stage.pk %}<i class="bi bi-pencil" style="font-size:.6rem;"></i>
+          {% else %}{{ forloop.counter }}{% endif %}
+        </div>
+        <div style="font-size:.78rem;">
+          <span class="fw-semibold">{{ s.stage_label }}</span>
+          {% if stage and s.pk == stage.pk %}<span class="badge bg-primary ms-1" style="font-size:.6rem;">CURRENT</span>{% endif %}
+          {% if s.approver_dept %}<span class="text-muted ms-1">({{ s.approver_dept }})</span>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body small">
+      <div class="row g-2">
+        <div class="col-5 text-muted">Permit Type</div>
+        <div class="col-7">
+          <span class="badge text-white" style="background:{{ permit.type_color }}">{{ permit.get_permit_type_display }}</span>
+        </div>
+        <div class="col-5 text-muted">Title</div>
+        <div class="col-7 fw-semibold">{{ permit.title }}</div>
+        <div class="col-5 text-muted">Location</div>
+        <div class="col-7">{{ permit.location }}</div>
+        <div class="col-5 text-muted">Risk Level</div>
+        <div class="col-7">
+          {% if permit.risk_level == 'critical' %}<span class="badge bg-danger">Critical</span>
+          {% elif permit.risk_level == 'high' %}<span class="badge bg-warning text-dark">High</span>
+          {% elif permit.risk_level == 'medium' %}<span class="badge bg-info text-dark">Medium</span>
+          {% else %}<span class="badge bg-success">Low</span>{% endif %}
+        </div>
+        <div class="col-5 text-muted">Requested By</div>
+        <div class="col-7">{{ permit.requested_by.employee_name }}</div>
+        <div class="col-5 text-muted">Validity</div>
+        <div class="col-7">{{ permit.start_datetime|date:"d M Y H:i" }} → {{ permit.end_datetime|date:"d M Y H:i" }}</div>
+      </div>
+    </div>
+  </div>
+
+  {% with score=permit.checklist_score %}
+  {% if score %}
+  <div class="alert {% if score.pct == 100 %}alert-success{% elif score.pct >= 70 %}alert-warning{% else %}alert-danger{% endif %} small mb-3">
+    <i class="bi bi-clipboard2-check me-2"></i>
+    ISO Checklist: <strong>{{ score.checked }}/{{ score.total }} ({{ score.pct }}%)</strong> items verified
+    {% if score.pct < 100 %} — <strong>Not all items checked!</strong>{% endif %}
+  </div>
+  {% endif %}
+  {% endwith %}
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom fw-semibold">
+      <i class="bi bi-check2-square me-2"></i>Your Decision
+    </div>
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Action <span class="text-danger">*</span></label>
+          {{ form.action }}
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Remarks</label>
+          {{ form.remarks }}
+        </div>
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-success">
+            <i class="bi bi-check-circle me-1"></i>Submit Decision
+          </button>
+          <a href="{% url 'work_permit:detail' permit.pk %}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

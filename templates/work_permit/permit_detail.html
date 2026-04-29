@@ -1,0 +1,536 @@
+{% extends "base.html" %}
+
+{% block title %}{{ permit.permit_number }} — Work Permit Detail{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+  <!-- Header -->
+  <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+    <div class="d-flex align-items-center gap-3">
+      <a href="{% url 'work_permit:list' %}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+      <div>
+        <h5 class="mb-0 fw-bold">{{ permit.permit_number }}</h5>
+        <span class="badge text-white" style="background:{{ permit.type_color }}">
+          <i class="bi {{ permit.type_icon }} me-1"></i>{{ permit.get_permit_type_display }}
+        </span>
+        {% if permit.renewal_required %}
+        <span class="badge bg-warning text-dark ms-1" style="font-size:.65rem;">
+          <i class="bi bi-arrow-repeat me-1"></i>Renewal Enabled
+        </span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+
+      {% if permit.status == 'draft' and permit.requested_by == request.user %}
+      <a href="{% url 'work_permit:edit' permit.pk %}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-pencil me-1"></i>Edit
+      </a>
+      <form method="post" action="{% url 'work_permit:submit' permit.pk %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-warning">
+          <i class="bi bi-send me-1"></i>Submit for Approval
+        </button>
+      </form>
+      {% endif %}
+
+      {% if can_approve and permit.status == 'pending' or pending_stage %}
+      <a href="{% url 'work_permit:approve' permit.pk %}" class="btn btn-sm btn-success">
+        <i class="bi bi-check-circle me-1"></i>Approve / Reject
+      </a>
+      {% endif %}
+
+      {% if permit.status in 'approved,suspended' %}
+      <a href="{% url 'work_permit:close' permit.pk %}" class="btn btn-sm btn-outline-dark">
+        <i class="bi bi-x-circle me-1"></i>Close Permit
+      </a>
+      {% endif %}
+
+      {% if permit.renewal_required and permit.status in 'approved,closed' %}
+        {% if permit.requested_by == request.user or is_admin %}
+        <button type="button" class="btn btn-sm btn-warning" onclick="toggleRenewForm()">
+          <i class="bi bi-arrow-repeat me-1"></i>Request Renewal
+        </button>
+        {% endif %}
+      {% endif %}
+
+      {% if permit.renewal_required and permit.status in 'approved,closed' %}
+      {% if permit.requested_by == request.user or is_admin %}
+      <div id="renewFormPanel" class="w-100 mt-2" style="display:none;">
+        <form method="post" action="{% url 'work_permit:renew' permit.pk %}" class="card card-body border-warning"
+              onsubmit="return confirm('Start renewal workflow for {{ permit.permit_number }}?')">
+          {% csrf_token %}
+          <label for="renewComment" class="form-label fw-semibold small mb-1">Renewal Comment</label>
+          <textarea id="renewComment" name="renew_comment" class="form-control form-control-sm" rows="3" required
+                    placeholder="Add the renewal reason / renewal comment before submitting."></textarea>
+          <div class="d-flex gap-2 mt-2">
+            <button type="submit" class="btn btn-sm btn-warning">
+              <i class="bi bi-send me-1"></i>Submit Renewal
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleRenewForm(false)">
+              Cancel
+            </button>
+          </div>
+          <small class="text-muted mt-2">This comment will be saved in the permit comments and then the renewal workflow will start.</small>
+        </form>
+      </div>
+      {% endif %}
+      {% endif %}
+
+      {% if permit.status == 'closed' and is_admin %}
+      <form method="post" action="{% url 'work_permit:reopen' permit.pk %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-outline-success"
+                onclick="return confirm('Re-open {{ permit.permit_number }}?')">
+          <i class="bi bi-arrow-counterclockwise me-1"></i>Re-open
+        </button>
+      </form>
+      {% endif %}
+
+      <a href="{% url 'work_permit:print' permit.pk %}" target="_blank" class="btn btn-sm btn-outline-dark">
+        <i class="bi bi-printer me-1"></i>Print
+      </a>
+
+      {% if is_admin %}
+      <a href="{% url 'work_permit:delete' permit.pk %}" class="btn btn-sm btn-outline-danger"
+         onclick="return confirm('Delete {{ permit.permit_number }}? This cannot be undone.')">
+        <i class="bi bi-trash me-1"></i>Delete
+      </a>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Main Info -->
+    <div class="col-lg-8">
+
+      <!-- Status Banner -->
+      <div class="alert {% if permit.status == 'approved' %}alert-success{% elif permit.status == 'pending' %}alert-warning{% elif permit.status == 'rejected' %}alert-danger{% elif permit.status == 'suspended' %}alert-dark{% elif permit.status == 'closed' %}alert-secondary{% elif permit.status == 'expired' %}alert-danger{% else %}alert-secondary{% endif %} d-flex align-items-center gap-3 mb-3">
+        <i class="bi {% if permit.status == 'approved' %}bi-check-circle-fill{% elif permit.status == 'pending' %}bi-hourglass-split{% elif permit.status == 'rejected' %}bi-x-circle-fill{% elif permit.status == 'suspended' %}bi-pause-circle-fill{% elif permit.status == 'closed' %}bi-archive-fill{% elif permit.status == 'expired' %}bi-clock-history{% else %}bi-file-earmark{% endif %} fs-4"></i>
+        <div>
+          <strong>{{ permit.get_status_display }}</strong>
+          {% if permit.status == 'rejected' and permit.rejection_reason %}
+          — {{ permit.rejection_reason }}
+          {% elif permit.status == 'suspended' and permit.suspension_reason %}
+          — {{ permit.suspension_reason }}
+          {% elif permit.status == 'closed' and permit.closure_remarks %}
+          — {{ permit.closure_remarks }}
+          {% endif %}
+        </div>
+        <div class="ms-auto">
+          {% if permit.risk_level == 'critical' %}<span class="badge bg-danger fs-6">⚠ CRITICAL RISK</span>
+          {% elif permit.risk_level == 'high' %}<span class="badge bg-warning text-dark fs-6">HIGH RISK</span>
+          {% elif permit.risk_level == 'medium' %}<span class="badge bg-info text-dark">MEDIUM RISK</span>
+          {% else %}<span class="badge bg-success">LOW RISK</span>{% endif %}
+        </div>
+      </div>
+
+      <!-- Details Card -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom fw-semibold">
+          <i class="bi bi-info-circle me-2"></i>Permit Details
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-12">
+              <label class="text-muted small">Work Description</label>
+              <div class="fw-semibold">{{ permit.title }}</div>
+            </div>
+            <div class="col-md-6">
+              <label class="text-muted small">Location / Area</label>
+              <div>{{ permit.location }}</div>
+            </div>
+            <div class="col-md-3">
+              <label class="text-muted small">Equipment / Tag</label>
+              <div>{{ permit.equipment_tag|default:"—" }}</div>
+            </div>
+            <div class="col-md-3">
+              <label class="text-muted small">Plant Area / Unit</label>
+              <div>{{ permit.plant_area|default:"—" }}</div>
+            </div>
+            <div class="col-md-3">
+              <label class="text-muted small">Planned Start</label>
+              <div>{{ permit.start_datetime|date:"d M Y H:i" }}</div>
+            </div>
+            <div class="col-md-3">
+              <label class="text-muted small">Renewal Required</label>
+              <div>
+                {% if permit.renewal_required %}
+                <span class="badge bg-warning text-dark">Yes — 7 Days</span>
+                {% else %}
+                <span class="badge bg-secondary">No</span>
+                {% endif %}
+                {% if permit.renewal_deadline %}
+                <div class="small text-muted mt-1">Auto-closes: {{ permit.renewal_deadline|date:"d M Y H:i" }}</div>
+                {% endif %}
+              </div>
+            </div>
+            <div class="col-md-3">
+              <label class="text-muted small">Shift</label>
+              <div>{{ permit.get_shift_display|default:"—" }}</div>
+            </div>
+            <div class="col-md-3">
+              <label class="text-muted small">No. of Workers</label>
+              <div>{{ permit.workers_count }}</div>
+            </div>
+            {% if permit.contractor_name %}
+            <div class="col-md-6">
+              <label class="text-muted small">Contractor / Agency</label>
+              <div>{{ permit.contractor_name }}</div>
+            </div>
+            <div class="col-md-6">
+              <label class="text-muted small">Contractor Supervisor</label>
+              <div>{{ permit.contractor_supervisor|default:"—" }}</div>
+            </div>
+            {% endif %}
+            {% if permit.workers_names %}
+            <div class="col-12">
+              <label class="text-muted small">Worker Names / IDs</label>
+              <div class="small">{{ permit.workers_names|linebreaksbr }}</div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Safety Card -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-warning text-dark fw-semibold">
+          <i class="bi bi-exclamation-triangle me-2"></i>Hazard & Safety Controls
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="text-muted small">Identified Hazards</label>
+              <div class="small">{{ permit.hazards|linebreaksbr|default:"—" }}</div>
+            </div>
+            <div class="col-md-6">
+              <label class="text-muted small">Safety Precautions / Controls</label>
+              <div class="small">{{ permit.precautions|linebreaksbr|default:"—" }}</div>
+            </div>
+            <div class="col-md-6">
+              <label class="text-muted small">PPE Required</label>
+              <div class="small">{{ permit.ppe_required|linebreaksbr|default:"—" }}</div>
+            </div>
+            <div class="col-md-6">
+              <label class="text-muted small">Emergency Procedure</label>
+              <div class="small">{{ permit.emergency_procedure|linebreaksbr|default:"—" }}</div>
+            </div>
+            <div class="col-md-6">
+              <label class="text-muted small">Gas Test Required</label>
+              <div>
+                {% if permit.gas_test_required %}
+                <span class="badge bg-warning text-dark">Yes</span>
+                {% if permit.gas_test_result %} — {{ permit.gas_test_result }}{% endif %}
+                {% else %}<span class="badge bg-secondary">No</span>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="text-muted small">Isolation / LOTO Required</label>
+              <div>
+                {% if permit.isolation_required %}
+                <span class="badge bg-danger">Yes</span>
+                {% if permit.isolation_details %}<div class="small mt-1">{{ permit.isolation_details }}</div>{% endif %}
+                {% else %}<span class="badge bg-secondary">No</span>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="text-muted small">MOC (Management of Change)</label>
+              <div>
+                {% if permit.moc_required %}
+                <span class="badge bg-warning text-dark">Required</span>
+                {% else %}<span class="badge bg-secondary">Not Required</span>{% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ISO Checklist -->
+      {% with score=permit.checklist_score items=permit.checklist_items %}
+      {% if items %}
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-success text-white fw-semibold d-flex justify-content-between">
+          <span><i class="bi bi-clipboard2-check me-2"></i>ISO 45001 Safety Checklist</span>
+          {% if score %}
+          <span class="badge bg-white text-success">{{ score.checked }}/{{ score.total }} ({{ score.pct }}%)</span>
+          {% endif %}
+        </div>
+        {% if score %}
+        <div class="progress" style="height:6px;border-radius:0">
+          <div class="progress-bar {% if score.pct == 100 %}bg-success{% elif score.pct >= 70 %}bg-warning{% else %}bg-danger{% endif %}"
+               style="width:{{ score.pct }}%"></div>
+        </div>
+        {% endif %}
+        <div class="card-body p-0">
+          <ul class="list-group list-group-flush">
+            {% for item in items %}
+            <li class="list-group-item px-3 py-2 d-flex align-items-center gap-2">
+              {% if item.checked %}
+              <i class="bi bi-check-circle-fill text-success"></i>
+              {% else %}
+              <i class="bi bi-circle text-muted"></i>
+              {% endif %}
+              <span class="small {% if not item.checked %}text-muted{% endif %}">{{ item.label }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+      {% endif %}
+      {% endwith %}
+
+      <!-- Comments -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom fw-semibold">
+          <i class="bi bi-chat-dots me-2"></i>Comments ({{ permit.comments.count }})
+        </div>
+        <div class="card-body">
+          {% for c in permit.comments.all %}
+          <div class="d-flex gap-2 mb-3">
+            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0"
+                 style="width:36px;height:36px;font-size:.8rem">
+              {{ c.author.employee_name|slice:":1" }}
+            </div>
+            <div class="flex-grow-1">
+              <div class="d-flex justify-content-between">
+                <strong class="small">{{ c.author.employee_name }}</strong>
+                <small class="text-muted">{{ c.created_at|date:"d M Y H:i" }}</small>
+              </div>
+              <div class="small mt-1">{{ c.comment }}</div>
+            </div>
+          </div>
+          {% empty %}
+          <div class="text-muted small">No comments yet.</div>
+          {% endfor %}
+          <form method="post" class="mt-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="comment">
+            {{ comment_form.comment }}
+            <button type="submit" class="btn btn-sm btn-primary mt-2">
+              <i class="bi bi-send me-1"></i>Add Comment
+            </button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Sidebar -->
+    <div class="col-lg-4">
+
+      <!-- ── Main Approval Workflow ── -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom fw-semibold">
+          <i class="bi bi-diagram-3 me-2"></i>Approval Workflow
+          {% if permit.isolation_required and permit.moc_required %}
+          <span class="badge bg-danger ms-1" style="font-size:.65rem;">Isolation + MOC</span>
+          {% elif permit.isolation_required %}
+          <span class="badge bg-warning text-dark ms-1" style="font-size:.65rem;">Isolation</span>
+          {% elif permit.moc_required %}
+          <span class="badge bg-info text-dark ms-1" style="font-size:.65rem;">MOC</span>
+          {% endif %}
+        </div>
+        <div class="card-body p-0">
+          {% if stages %}
+          {% for s in stages %}
+          <div class="d-flex gap-3 px-3 py-2 border-bottom {% if forloop.last %}border-0{% endif %}">
+            <div class="d-flex flex-column align-items-center" style="min-width:32px;">
+              <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0
+                {% if s.status == 'approved' %}bg-success text-white
+                {% elif s.status == 'rejected' %}bg-danger text-white
+                {% elif pending_stage and pending_stage.workflow_type == 'main' and s.pk == pending_stage.pk %}bg-primary text-white
+                {% else %}bg-light text-muted{% endif %}"
+                   style="width:30px;height:30px;font-size:.75rem;">
+                {% if s.status == 'approved' %}<i class="bi bi-check-lg"></i>
+                {% elif s.status == 'rejected' %}<i class="bi bi-x-lg"></i>
+                {% elif pending_stage and pending_stage.workflow_type == 'main' and s.pk == pending_stage.pk %}<i class="bi bi-pencil" style="font-size:.65rem;"></i>
+                {% else %}{{ forloop.counter }}{% endif %}
+              </div>
+              {% if not forloop.last %}
+              <div class="border-start border-2 flex-grow-1 mt-1"
+                   style="min-height:20px;{% if s.status == 'approved' %}border-color:#198754!important;{% endif %}"></div>
+              {% endif %}
+            </div>
+            <div class="flex-grow-1 pb-1">
+              <div class="fw-semibold" style="font-size:.8rem;">
+                {{ s.stage_label }}
+                {% if s.stage_type == 'acknowledge' %}
+                <span class="badge bg-info text-dark ms-1" style="font-size:.6rem;">ACK</span>
+                {% endif %}
+                {% if pending_stage and pending_stage.workflow_type == 'main' and s.pk == pending_stage.pk %}
+                <span class="badge bg-primary ms-1" style="font-size:.6rem;">CURRENT</span>
+                {% if is_admin %}<span class="badge bg-warning text-dark ms-1" style="font-size:.6rem;">ADMIN</span>{% endif %}
+                {% endif %}
+              </div>
+              {% if s.approver_dept %}
+              <div class="text-muted" style="font-size:.7rem;">Dept: {{ s.approver_dept }}</div>
+              {% endif %}
+              {% if s.approver %}
+              <div class="{% if s.status == 'approved' %}text-success{% else %}text-danger{% endif %}" style="font-size:.75rem;">
+                {{ s.approver.employee_name }}
+              </div>
+              <div class="text-muted" style="font-size:.65rem;">{{ s.acted_at|date:"d M Y H:i" }}</div>
+              {% if s.remarks %}<div class="text-muted fst-italic" style="font-size:.7rem;">{{ s.remarks }}</div>{% endif %}
+              {% else %}
+              <div class="text-muted" style="font-size:.75rem;">Pending</div>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+          {% else %}
+          <div class="p-3 text-muted small">
+            {% if permit.status == 'draft' %}Submit permit to start workflow.{% else %}No workflow stages.{% endif %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- ── Renewal Workflow History ── -->
+      {% if permit.renewal_required %}
+      <div class="card border-0 shadow-sm mb-4" style="border-left:3px solid #d97706!important;">
+        <div class="card-header fw-semibold" style="background:#fffbeb;border-bottom:1px solid #fde68a;">
+          <i class="bi bi-arrow-repeat me-2 text-warning"></i>Renewal Workflow
+          <span class="badge bg-warning text-dark ms-1">{{ renewals.count }} renewal{{ renewals.count|pluralize }}</span>
+        </div>
+        <div class="card-body p-0">
+          {% if active_renewal and renewal_stages %}
+          <div class="px-3 py-2 border-bottom" style="background:#fff7ed;">
+            <div class="fw-semibold small text-uppercase text-muted mb-2">Current Renewal Workflow</div>
+            {% for s in renewal_stages %}
+            <div class="d-flex gap-3 py-2 {% if not forloop.last %}border-bottom{% endif %}">
+              <div class="d-flex flex-column align-items-center" style="min-width:32px;">
+                <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0
+                  {% if s.status == 'approved' %}bg-success text-white
+                  {% elif s.status == 'rejected' %}bg-danger text-white
+                  {% elif pending_stage and pending_stage.workflow_type == 'renewal' and s.pk == pending_stage.pk %}bg-primary text-white
+                  {% else %}bg-light text-muted{% endif %}"
+                     style="width:30px;height:30px;font-size:.75rem;">
+                  {% if s.status == 'approved' %}<i class="bi bi-check-lg"></i>
+                  {% elif s.status == 'rejected' %}<i class="bi bi-x-lg"></i>
+                  {% elif pending_stage and pending_stage.workflow_type == 'renewal' and s.pk == pending_stage.pk %}<i class="bi bi-pencil" style="font-size:.65rem;"></i>
+                  {% else %}{{ forloop.counter }}{% endif %}
+                </div>
+                {% if not forloop.last %}
+                <div class="border-start border-2 flex-grow-1 mt-1"
+                     style="min-height:20px;{% if s.status == 'approved' %}border-color:#198754!important;{% endif %}"></div>
+                {% endif %}
+              </div>
+              <div class="flex-grow-1 pb-1">
+                <div class="fw-semibold" style="font-size:.8rem;">
+                  {{ s.stage_label }}
+                  {% if s.stage_type == 'acknowledge' %}
+                  <span class="badge bg-info text-dark ms-1" style="font-size:.6rem;">ACK</span>
+                  {% endif %}
+                  {% if pending_stage and pending_stage.workflow_type == 'renewal' and s.pk == pending_stage.pk %}
+                  <span class="badge bg-primary ms-1" style="font-size:.6rem;">CURRENT</span>
+                  {% endif %}
+                </div>
+                {% if s.approver_dept %}
+                <div class="text-muted" style="font-size:.7rem;">Dept: {{ s.approver_dept }}</div>
+                {% endif %}
+                {% if s.approver %}
+                <div class="{% if s.status == 'approved' %}text-success{% else %}text-danger{% endif %}" style="font-size:.75rem;">
+                  {{ s.approver.employee_name }}
+                </div>
+                <div class="text-muted" style="font-size:.65rem;">{{ s.acted_at|date:"d M Y H:i" }}</div>
+                {% if s.remarks %}<div class="text-muted fst-italic" style="font-size:.7rem;">{{ s.remarks }}</div>{% endif %}
+                {% else %}
+                <div class="text-muted" style="font-size:.75rem;">Pending</div>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+          {% if renewals %}
+          {% for r in renewals %}
+          <div class="px-3 py-2 {% if not forloop.last %}border-bottom{% endif %}" style="background:{% if r.status == 'approved' %}#f0fdf4{% elif r.status == 'rejected' %}#fef2f2{% else %}#fffbeb{% endif %};">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="fw-semibold" style="font-size:.8rem;">
+                <i class="bi bi-arrow-repeat me-1"></i>Renewal #{{ r.renewal_no }}
+              </span>
+              <span class="badge {% if r.status == 'approved' %}bg-success{% elif r.status == 'rejected' %}bg-danger{% else %}bg-warning text-dark{% endif %}" style="font-size:.65rem;">
+                {{ r.status|upper }}
+              </span>
+            </div>
+            <div class="text-muted" style="font-size:.7rem;">
+              Requested by: {{ r.requested_by.employee_name|default:"—" }}<br>
+              {{ r.requested_at|date:"d M Y H:i" }}
+            </div>
+            {% if r.valid_from %}
+            <div class="text-success" style="font-size:.7rem;">
+              <i class="bi bi-calendar-check me-1"></i>
+              Valid: {{ r.valid_from|date:"d M Y" }} — {{ r.valid_until|date:"d M Y" }}
+            </div>
+            {% endif %}
+          </div>
+          {% endfor %}
+          {% else %}
+          <div class="p-3 text-muted small">
+            <i class="bi bi-info-circle me-1"></i>
+            No renewals yet.
+            {% if permit.status in 'approved,closed' %}
+            Use the <strong>Request Renewal</strong> button above to start the renewal workflow.
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+        {% if permit.status in 'approved,closed' and permit.requested_by == request.user or is_admin and permit.status in 'approved,closed' %}
+        <div class="card-footer" style="background:#fffbeb;border-top:1px solid #fde68a;">
+          <small class="text-muted">
+            <i class="bi bi-info-circle me-1"></i>
+            Renewal workflow: Issuer (Ack) → Custodian (Approval) → Safety Officer (Ack)
+          </small>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <!-- Permit Meta -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom fw-semibold">
+          <i class="bi bi-card-list me-2"></i>Permit Info
+        </div>
+        <div class="card-body small">
+          <div class="row g-2">
+            <div class="col-6 text-muted">Requested By</div>
+            <div class="col-6 fw-semibold">{{ permit.requested_by.employee_name }}</div>
+            <div class="col-6 text-muted">Department</div>
+            <div class="col-6">{{ permit.requested_by.department }}</div>
+            <div class="col-6 text-muted">Created</div>
+            <div class="col-6">{{ permit.created_at|date:"d M Y H:i" }}</div>
+            <div class="col-6 text-muted">Last Updated</div>
+            <div class="col-6">{{ permit.updated_at|date:"d M Y H:i" }}</div>
+            {% if permit.attachment %}
+            <div class="col-6 text-muted">Attachment</div>
+            <div class="col-6">
+              <a href="{{ permit.attachment.url }}" target="_blank" class="text-decoration-none">
+                <i class="bi bi-file-earmark me-1"></i>View
+              </a>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<script>
+function toggleRenewForm(forceOpen = true) {
+  const panel = document.getElementById('renewFormPanel');
+  if (!panel) return;
+  const shouldOpen = forceOpen === false ? false : panel.style.display === 'none';
+  panel.style.display = shouldOpen ? 'block' : 'none';
+  if (shouldOpen) {
+    const input = document.getElementById('renewComment');
+    if (input) input.focus();
+  }
+}
+</script>
+{% endblock %}

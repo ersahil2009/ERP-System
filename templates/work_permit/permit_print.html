@@ -1,0 +1,489 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Work Permit — {{ permit.permit_number }}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 11px; color: #000; background: #fff; }
+  .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 12mm; }
+  .header { border: 2px solid #000; margin-bottom: 4px; }
+  .header-top { display: flex; align-items: stretch; border-bottom: 1px solid #000; }
+  .header-logo { padding: 8px 12px; border-right: 1px solid #000; display: flex; align-items: center; justify-content: center; min-width: 160px; }
+  .header-title { flex: 1; text-align: center; padding: 8px 6px; display: flex; flex-direction: column; justify-content: center; }
+  .header-title h2 { font-size: 17px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+  .header-title h3 { font-size: 11px; color: #444; margin-top: 3px; }
+  .header-meta { padding: 8px 12px; border-left: 1px solid #000; text-align: right; min-width: 155px; display: flex; flex-direction: column; justify-content: center; }
+  .header-meta .permit-num { font-size: 15px; font-weight: bold; }
+  .permit-type-banner { padding: 6px 10px; font-weight: bold; font-size: 14px; text-align: center; color: #fff; letter-spacing: 0.5px; }
+  table.info { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+  table.info td, table.info th { border: 1px solid #000; padding: 4px 6px; vertical-align: top; }
+  table.info th { background: #f0f0f0; font-weight: bold; width: 28%; }
+  .section-header { background: #333; color: #fff; font-weight: bold; padding: 4px 8px; font-size: 11px; margin-top: 4px; }
+  .checklist-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid #000; border-top: none; }
+  .checklist-item { display: flex; align-items: flex-start; gap: 6px; padding: 4px 8px; border-bottom: 1px solid #ccc; border-right: 1px solid #ccc; }
+  .checklist-item:nth-child(even) { border-right: none; }
+  .chk-box { width: 14px; height: 14px; border: 1px solid #000; flex-shrink: 0; margin-top: 1px; display: flex; align-items: center; justify-content: center; font-size: 10px; }
+  .apv-table { width: 100%; border-collapse: collapse; border: 1px solid #000; border-top: none; margin-bottom: 4px; }
+  .apv-table td, .apv-table th { border: 1px solid #000; padding: 5px 6px; font-size: 10px; vertical-align: middle; }
+  .apv-table .row-label { background: #f0f0f0; font-weight: bold; white-space: nowrap; width: 1%; }
+  .apv-table .col-approved { background: #f0fdf4; }
+  .apv-table .col-pending { background: #fff; }
+  .apv-table .col-copermit { background: #fffbeb; }
+  .apv-table .col-head { background: #333; color: #fff; font-weight: bold; text-align: center; font-size: 10px; padding: 5px 6px; }
+  .apv-table .col-head.copermit-head { background: #92400e; }
+  .apv-table .sig-cell { height: 30px; }
+  .stage-approved { background: #f0fdf4; }
+  .stage-pending { background: #fff; }
+  .risk-badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-weight: bold; font-size: 11px; }
+  .risk-critical { background: #dc2626; color: #fff; }
+  .risk-high { background: #f59e0b; color: #000; }
+  .risk-medium { background: #3b82f6; color: #fff; }
+  .risk-low { background: #16a34a; color: #fff; }
+  .renewal-guidelines { border: 1px solid #000; border-top: none; padding: 8px 10px; font-size: 10px; line-height: 1.7; }
+  .renewal-guidelines p { margin-bottom: 4px; }
+  .renewal-guidelines ul { margin: 2px 0 6px 18px; }
+  .renewal-guidelines ol { margin: 2px 0 6px 18px; }
+  .renewal-guidelines li { margin-bottom: 2px; }
+  .renewal-guidelines .warning { font-style: italic; font-weight: bold; margin-top: 6px; border-top: 1px dashed #999; padding-top: 4px; }
+  .iso-footer { margin-top: 6px; border: 1px solid #000; padding: 4px 8px; font-size: 9px; color: #555; text-align: center; }
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-print { display: none; }
+    @page {
+      size: A4;
+      margin: 10mm;
+    }
+    .page-border {
+      display: block;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      border: 2px solid #000;
+      pointer-events: none;
+      z-index: 9999;
+    }
+    .page { border: none; padding: 4mm; }
+  }
+  @media screen {
+    .page-border { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page-border"></div>
+<div class="page">
+
+  <!-- Print Button -->
+  <div class="no-print" style="text-align:right;margin-bottom:8px">
+    <button onclick="window.print()" style="padding:6px 16px;background:#dc2626;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px">
+      🖨 Print / Save PDF
+    </button>
+    <button onclick="window.close()" style="padding:6px 16px;background:#6b7280;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;margin-left:6px">
+      ✕ Close
+    </button>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-top">
+      <div class="header-logo">
+        <img src="{% static 'images/Unity_Logo_Horizontal.png' %}" alt="Unity Cement" style="height:54px;max-width:150px;object-fit:contain;">
+      </div>
+      <div class="header-title">
+        <h2>PERMIT TO WORK (PTW)</h2>
+        <h3>ISO 45001:2018 Compliant — Cement Industry Safety Management System</h3>
+      </div>
+      <div class="header-meta">
+        <span class="permit-num">{{ permit.permit_number }}</span>
+        <span style="font-size:9px;margin-top:3px;">Doc Ref: {{ wp_doc_ref|default:'PTW-F-001' }}</span>
+        <span style="font-size:9px;">Rev: {{ wp_rev|default:'01' }}</span>
+      </div>
+    </div>
+    <div class="permit-type-banner" style="background:{{ permit.type_color }}">
+      <strong><em>{{ permit.get_permit_type_display|upper }}</em></strong>
+    </div>
+  </div>
+
+  <!-- Section 1: Permit Details -->
+  <div class="section-header">SECTION 1 — PERMIT DETAILS</div>
+  <table class="info">
+    <tr>
+      <th>Work Description</th>
+      <td colspan="3">{{ permit.title }}</td>
+    </tr>
+    <tr>
+      <th>Location / Area</th>
+      <td>{{ permit.location }}</td>
+      <th>Equipment / Tag No.</th>
+      <td>{{ permit.equipment_tag|default:"—" }}</td>
+    </tr>
+    <tr>
+      <th>Plant Area / Unit</th>
+      <td>{{ permit.plant_area|default:"—" }}</td>
+      <th>Shift</th>
+      <td>{{ permit.get_shift_display|default:"—" }}</td>
+    </tr>
+    <tr>
+      <th>Planned Start</th>
+      <td>{{ permit.start_datetime|date:"d-M-Y H:i" }}</td>
+      <th>Permit Renewal</th>
+      <td>{% if permit.renewal_required %}Required — Valid 7 days from approval (auto-closes midnight day 7 time : 00:00){% else %}Not Required — Auto-closes midnight today{% endif %}</td>
+    </tr>
+    <tr>
+      <th>Risk Level</th>
+      <td>
+        <span class="risk-badge risk-{{ permit.risk_level }}">{{ permit.get_risk_level_display|upper }}</span>
+      </td>
+      <th>Status</th>
+      <td><strong>{{ permit.get_status_display|upper }}</strong></td>
+    </tr>
+  </table>
+
+  <!-- Section 2: Personnel -->
+  <div class="section-header">SECTION 2 — PERSONNEL</div>
+  <table class="info">
+    <tr>
+      <th>Initiated By</th>
+      <td>{{ permit.requested_by.employee_name }} ({{ permit.requested_by.employee_code }})</td>
+      <th>Department</th>
+      <td>{{ permit.requested_by.department }}</td>
+    </tr>
+    <tr>
+      <th>Contractor / Agency</th>
+      <td>{{ permit.contractor_name|default:"—" }}</td>
+      <th>Contractor Supervisor</th>
+      <td>{{ permit.contractor_supervisor|default:"—" }}</td>
+    </tr>
+    <tr>
+      <th>No. of Workers</th>
+      <td>{{ permit.workers_count }}</td>
+      <th>Worker Names / IDs</th>
+      <td>{{ permit.workers_names|default:"—" }}</td>
+    </tr>
+  </table>
+
+  <!-- Section 3: Hazards & Controls -->
+  <div class="section-header">SECTION 3 — HAZARD IDENTIFICATION &amp; SAFETY CONTROLS</div>
+  <table class="info">
+    <tr>
+      <th>Identified Hazards</th>
+      <td>{{ permit.hazards|default:"—" }}</td>
+    </tr>
+    <tr>
+      <th>Safety Precautions / Controls</th>
+      <td>{{ permit.precautions|default:"—" }}</td>
+    </tr>
+    <tr>
+      <th>PPE Required</th>
+      <td>{{ permit.ppe_required|default:"—" }}</td>
+    </tr>
+    <tr>
+      <th>Emergency Procedure</th>
+      <td>{{ permit.emergency_procedure|default:"—" }}</td>
+    </tr>
+    <tr>
+      <th>Gas Test Required</th>
+      <td>{% if permit.gas_test_required %}YES — Result: {{ permit.gas_test_result|default:"Pending" }}{% else %}No{% endif %}</td>
+    </tr>
+    <tr>
+      <th>Isolation / LOTO Required</th>
+      <td>{% if permit.isolation_required %}YES — {{ permit.isolation_details|default:"See isolation certificate" }}{% else %}No{% endif %}</td>
+    </tr>
+    <tr>
+      <th>MOC Required</th>
+      <td>{% if permit.moc_required %}<strong>YES — Management of Change Required</strong>{% if permit.moc_details %}<br>{{ permit.moc_details }}{% endif %}{% else %}No{% endif %}</td>
+    </tr>
+  </table>
+
+  <!-- Section 4: ISO Checklist -->
+  {% with items=permit.checklist_items score=permit.checklist_score %}
+  {% if items %}
+  <div class="section-header">
+    SECTION 4 — ISO 45001 SAFETY CHECKLIST
+    {% if score %} ({{ score.checked }}/{{ score.total }} — {{ score.pct }}%){% endif %}
+  </div>
+  <div class="checklist-grid">
+    {% for item in items %}
+    <div class="checklist-item">
+      <div class="chk-box">{% if item.checked %}✓{% endif %}</div>
+      <span>{{ item.label }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endwith %}
+
+  <!-- Section 5: Approval Workflow -->
+  <div class="section-header">SECTION 5 — APPROVAL WORKFLOW AUTHORIZATION</div>
+  {% if stages %}
+  <table class="apv-table">
+    <thead>
+      <tr>
+        <th class="row-label" style="background:#333;color:#fff;">Field</th>
+        {% for s in stages %}
+        <th class="col-head">
+          {% if 'issuer' in s.stage_label|lower and 'electrical' in s.stage_label|lower %}ISSUER<br><span style="font-weight:normal;font-size:9px;">(Electrical)</span>
+          {% elif 'issuer' in s.stage_label|lower %}ISSUER
+          {% elif 'custodian' in s.stage_label|lower %}CUSTODIAN
+          {% elif 'isolat' in s.stage_label|lower %}ISOLATOR
+          {% elif 'safety' in s.stage_label|lower %}SAFETY OFFICER
+          {% elif 'moc' in s.stage_label|lower %}MOC
+          {% else %}{{ s.stage_label|upper }}{% endif %}
+        </th>
+        {% endfor %}
+        <th class="col-head copermit-head">CO-PERMIT</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="row-label">Department</td>
+        {% for s in stages %}
+        <td class="{% if s.status == 'approved' %}col-approved{% else %}col-pending{% endif %}">{% if s.approver %}{{ s.approver.department|default:"—" }}{% else %}{{ s.approver_dept|default:"—" }}{% endif %}</td>
+        {% endfor %}
+        <td class="col-copermit">—</td>
+      </tr>
+      <tr>
+        <td class="row-label">Name</td>
+        {% for s in stages %}
+        <td class="{% if s.status == 'approved' %}col-approved{% else %}col-pending{% endif %}">{{ s.approver.employee_name|default:"" }}</td>
+        {% endfor %}
+        <td class="col-copermit"></td>
+      </tr>
+      <tr>
+        <td class="row-label">Designation</td>
+        {% for s in stages %}
+        <td class="{% if s.status == 'approved' %}col-approved{% else %}col-pending{% endif %}">{{ s.approver.designation|default:"" }}</td>
+        {% endfor %}
+        <td class="col-copermit"></td>
+      </tr>
+      <tr>
+        <td class="row-label">Status</td>
+        {% for s in stages %}
+        <td class="{% if s.status == 'approved' %}col-approved{% else %}col-pending{% endif %}">
+          {% if s.status == 'approved' %}<strong>APPROVED</strong>
+          {% elif s.status == 'rejected' %}<strong>REJECTED</strong>
+          {% else %}PENDING{% endif %}
+        </td>
+        {% endfor %}
+        <td class="col-copermit"></td>
+      </tr>
+      <tr>
+        <td class="row-label">Date &amp; Time</td>
+        {% for s in stages %}
+        <td class="{% if s.status == 'approved' %}col-approved{% else %}col-pending{% endif %}">{{ s.acted_at|date:"d-M-Y H:i"|default:"" }}</td>
+        {% endfor %}
+        <td class="col-copermit"></td>
+      </tr>
+      <tr>
+        <td class="row-label">Remarks</td>
+        {% for s in stages %}
+        <td class="{% if s.status == 'approved' %}col-approved{% else %}col-pending{% endif %}">{{ s.remarks|default:"" }}</td>
+        {% endfor %}
+        <td class="col-copermit"></td>
+      </tr>
+      <tr>
+        <td class="row-label">Signature</td>
+        {% for s in stages %}
+        <td class="sig-cell {% if s.status == 'approved' %}col-approved{% else %}col-pending{% endif %}"></td>
+        {% endfor %}
+        <td class="sig-cell col-copermit"></td>
+      </tr>
+    </tbody>
+  </table>
+  {% else %}
+  <!-- Fallback: draft permit, no stages yet -->
+  <table class="apv-table">
+    <thead>
+      <tr>
+        <th class="row-label" style="background:#333;color:#fff;">Field</th>
+        <th class="col-head">ISSUER</th>
+        <th class="col-head">CUSTODIAN</th>
+        <th class="col-head">SAFETY OFFICER</th>
+        <th class="col-head copermit-head">CO-PERMIT</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td class="row-label">Department</td><td></td><td></td><td></td><td class="col-copermit"></td></tr>
+      <tr><td class="row-label">Name</td><td></td><td></td><td></td><td class="col-copermit"></td></tr>
+      <tr><td class="row-label">Designation</td><td></td><td></td><td></td><td class="col-copermit"></td></tr>
+      <tr><td class="row-label">Status</td><td></td><td></td><td></td><td class="col-copermit"></td></tr>
+      <tr><td class="row-label">Date &amp; Time</td><td></td><td></td><td></td><td class="col-copermit"></td></tr>
+      <tr><td class="row-label">Remarks</td><td></td><td></td><td></td><td class="col-copermit"></td></tr>
+      <tr><td class="row-label sig-cell">Signature</td><td class="sig-cell"></td><td class="sig-cell"></td><td class="sig-cell"></td><td class="sig-cell col-copermit"></td></tr>
+    </tbody>
+  </table>
+  {% endif %}
+
+  <!-- Section 6: Renewal Workflow Authorization -->
+  <div class="section-header">SECTION 6 — RENEWAL WORKFLOW AUTHORIZATION</div>
+  <div class="renewal-guidelines">
+    <p><strong>Guidelines for Renewal of Work Permit</strong></p>
+    <p>Work permit needs to be renewed:</p>
+    <ul>
+      <li>At start of General shift every day.</li>
+      <li>Whenever initiator is changed for any reason.</li>
+      <li>Whenever Co-Permittee is changed for any reason.</li>
+    </ul>
+    <p><strong>Procedure for renewal of Work permit:</strong></p>
+    <ol>
+      <li>Initiator shall brief risk assessment and its mitigation to work group and obtain signature of Co-permittee.</li>
+      <li>Issuer shall sign on both copies (1st and 2nd copy) of permit, return 1st copy to initiator and retain 2nd copy with him.</li>
+      <li>Initiator shall restart work after renewal by issuer.</li>
+      <li>In the event of change in work group, Renewal of Permit from issuer is not required. However, Initiator should explain safety measures, risk assessment and its mitigation to new person(s) in the work group and should sign and obtain signature of co-permittee.</li>
+    </ol>
+    <p class="warning">While permit is due for renewal, and / or is under renewal process, Initiator shall not start work.</p>
+  </div>
+
+  <!-- Renewal Authorization Table — fetched from renewal workflow stages -->
+  {% if renewals_with_stages %}
+  {% for rws in renewals_with_stages %}
+  <div style="margin-top:6px;border:1px solid #555;border-radius:2px;">
+    <div style="background:#555;color:#fff;font-weight:bold;font-size:10px;padding:3px 8px;">
+      RENEWAL #{{ rws.renewal.renewal_no }}
+      &nbsp;|&nbsp; Requested: {{ rws.renewal.requested_at|date:"d-M-Y H:i" }}
+      &nbsp;|&nbsp; Status: {{ rws.renewal.status|upper }}
+      {% if rws.renewal.valid_from %}&nbsp;|&nbsp; Valid: {{ rws.renewal.valid_from|date:"d-M-Y" }} → {{ rws.renewal.valid_until|date:"d-M-Y" }}{% endif %}
+    </div>
+    <table class="apv-table" style="border-top:none;margin-bottom:0;">
+      <thead>
+        <tr>
+          <th class="row-label" style="background:#333;color:#fff;">Field</th>
+          <th class="col-head" style="background:#1e3a5f;">INITIATOR</th>
+          {% for s in rws.stages %}
+          <th class="col-head">
+            {% if 'issuer' in s.stage_label|lower %}ISSUER
+            {% elif 'custodian' in s.stage_label|lower %}CUSTODIAN
+            {% elif 'safety' in s.stage_label|lower %}SAFETY OFFICER
+            {% else %}{{ s.stage_label|upper }}{% endif %}
+            {% if s.stage_type == 'acknowledge' %}<br><span style="font-weight:normal;font-size:8px;">(Acknowledge)</span>{% endif %}
+          </th>
+          {% endfor %}
+          <th class="col-head copermit-head">CO-PERMITTEE</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="row-label">Department</td>
+          <td class="col-pending">{{ rws.renewal.requested_by.department|default:"—" }}</td>
+          {% for s in rws.stages %}<td class="{% if s.status == 'approved' %}col-approved{% else %}col-pending{% endif %}">{% if s.approver %}{{ s.approver.department|default:"—" }}{% else %}{{ s.approver_dept|default:"—" }}{% endif %}</td>{% endfor %}
+          <td class="col-copermit">—</td>
+        </tr>
+        <tr>
+          <td class="row-label">Name</td>
+          <td class="col-pending">{{ rws.renewal.requested_by.employee_name|default:"" }}</td>
+          {% for s in rws.stages %}<td class="{% if s.status == 'approved' %}col-approved{% else %}col-pending{% endif %}">{{ s.approver.employee_name|default:"" }}</td>{% endfor %}
+          <td class="col-copermit"></td>
+        </tr>
+        <tr>
+          <td class="row-label">Designation</td>
+          <td class="col-pending">{{ rws.renewal.requested_by.designation|default:"" }}</td>
+          {% for s in rws.stages %}<td class="{% if s.status == 'approved' %}col-approved{% else %}col-pending{% endif %}">{{ s.approver.designation|default:"" }}</td>{% endfor %}
+          <td class="col-copermit"></td>
+        </tr>
+        <tr>
+          <td class="row-label">Status</td>
+          <td class="col-pending">—</td>
+          {% for s in rws.stages %}
+          <td class="{% if s.status == 'approved' %}col-approved{% else %}col-pending{% endif %}">
+            {% if s.status == 'approved' %}<strong>APPROVED</strong>
+            {% elif s.status == 'rejected' %}<strong>REJECTED</strong>
+            {% else %}PENDING{% endif %}
+          </td>
+          {% endfor %}
+          <td class="col-copermit"></td>
+        </tr>
+        <tr>
+          <td class="row-label">Date &amp; Time</td>
+          <td class="col-pending">{{ rws.renewal.requested_at|date:"d-M-Y H:i" }}</td>
+          {% for s in rws.stages %}<td class="{% if s.status == 'approved' %}col-approved{% else %}col-pending{% endif %}">{{ s.acted_at|date:"d-M-Y H:i"|default:"" }}</td>{% endfor %}
+          <td class="col-copermit"></td>
+        </tr>
+        <tr>
+          <td class="row-label">Remarks</td>
+          <td class="col-pending">—</td>
+          {% for s in rws.stages %}<td class="{% if s.status == 'approved' %}col-approved{% else %}col-pending{% endif %}">{{ s.remarks|default:"" }}</td>{% endfor %}
+          <td class="col-copermit"></td>
+        </tr>
+        <tr>
+          <td class="row-label sig-cell">Signature</td>
+          <td class="sig-cell col-pending"></td>
+          {% for s in rws.stages %}<td class="sig-cell {% if s.status == 'approved' %}col-approved{% else %}col-pending{% endif %}"></td>{% endfor %}
+          <td class="sig-cell col-copermit"></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  {% endfor %}
+  {% else %}
+  <!-- Blank renewal table when no renewal has been triggered yet -->
+  <table class="apv-table">
+    <thead>
+      <tr>
+        <th class="row-label" style="background:#333;color:#fff;">Field</th>
+        <th class="col-head" style="background:#1e3a5f;">INITIATOR</th>
+        <th class="col-head">ISSUER<br><span style="font-weight:normal;font-size:8px;">(Acknowledge)</span></th>
+        <th class="col-head">CUSTODIAN</th>
+        <th class="col-head">SAFETY OFFICER<br><span style="font-weight:normal;font-size:8px;">(Acknowledge)</span></th>
+        <th class="col-head copermit-head">CO-PERMITTEE</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td class="row-label">Department</td><td></td><td></td><td></td><td></td><td class="col-copermit"></td></tr>
+      <tr><td class="row-label">Name</td><td></td><td></td><td></td><td></td><td class="col-copermit"></td></tr>
+      <tr><td class="row-label">Designation</td><td></td><td></td><td></td><td></td><td class="col-copermit"></td></tr>
+      <tr><td class="row-label">Status</td><td></td><td></td><td></td><td></td><td class="col-copermit"></td></tr>
+      <tr><td class="row-label">Date &amp; Time</td><td></td><td></td><td></td><td></td><td class="col-copermit"></td></tr>
+      <tr><td class="row-label">Remarks</td><td></td><td></td><td></td><td></td><td class="col-copermit"></td></tr>
+      <tr><td class="row-label sig-cell">Signature</td><td class="sig-cell"></td><td class="sig-cell"></td><td class="sig-cell"></td><td class="sig-cell"></td><td class="sig-cell col-copermit"></td></tr>
+    </tbody>
+  </table>
+  {% endif %}
+
+  <!-- Section 7: Closure of Work Permit -->
+  <div class="section-header">SECTION 7 — CLOSURE OF WORK PERMIT</div>
+  <table class="info">
+    <tr>
+      <th>Actual Start</th>
+      <td>{{ permit.actual_start|date:"d-M-Y H:i"|default:"—" }}</td>
+      <th>Actual End / Closure Time</th>
+      <td>{{ permit.actual_end|date:"d-M-Y H:i"|default:"—" }}</td>
+    </tr>
+    <tr>
+      <th>Closure Remarks</th>
+      <td colspan="3">{{ permit.closure_remarks|default:"—" }}</td>
+    </tr>
+    <tr>
+      <th>Closed By (Initiator)</th>
+      <td>
+        Name: ___________________________<br>
+        Signature: ______________________<br>
+        Date &amp; Time: _________________
+      </td>
+      <th>Confirmed By (Issuer)</th>
+      <td>
+        Name: ___________________________<br>
+        Signature: ______________________<br>
+        Date &amp; Time: _________________
+      </td>
+    </tr>
+    <tr>
+      <th>Work Area Condition</th>
+      <td colspan="3">
+        <span style="margin-right:20px;">☐ Area cleaned &amp; restored</span>
+        <span style="margin-right:20px;">☐ Tools &amp; equipment removed</span>
+        <span>☐ Isolation removed / LOTO released</span>
+      </td>
+    </tr>
+  </table>
+
+  <!-- ISO Footer -->
+  <div class="iso-footer">
+    This Permit to Work is issued in accordance with ISO 45001:2018 Occupational Health &amp; Safety Management System requirements.
+    This document must be retained at the work site for the duration of the work and filed in the safety records upon completion.
+    Doc No: {{ wp_doc_ref|default:'PTW-F-001' }} | Rev: {{ wp_rev|default:'01' }} | Issued: {{ permit.created_at|date:"d-M-Y" }}
+  </div>
+
+</div>
+</body>
+</html>

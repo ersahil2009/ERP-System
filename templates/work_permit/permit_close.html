@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Close Permit — {{ permit.permit_number }}{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width:500px">
+  <div class="d-flex align-items-center mb-3 gap-3">
+    <a href="{% url 'work_permit:detail' permit.pk %}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <h5 class="mb-0 fw-bold">Close Permit — {{ permit.permit_number }}</h5>
+  </div>
+  <div class="card border-0 shadow-sm">
+    <div class="card-body">
+      <p class="text-muted small">Closing this permit will mark it as <strong>Completed</strong> and record the actual end time.</p>
+      <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Closure Remarks</label>
+          {{ form.closure_remarks }}
+        </div>
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-dark">
+            <i class="bi bi-x-circle me-1"></i>Close Permit
+          </button>
+          <a href="{% url 'work_permit:detail' permit.pk %}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

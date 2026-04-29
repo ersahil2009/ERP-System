@@ -1,0 +1,243 @@
+{% extends 'base.html' %}
+{% block title %}Work Permit Report{% endblock %}
+{% block page_title %}Work Permit Report{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h4><i class="bi bi-file-earmark-bar-graph me-2"></i>Work Permit Report</h4>
+    </div>
+    <div class="d-flex gap-2">
+        {% if view_mode == 'summary' %}
+        <a href="{% url 'work_permit:report_excel' %}?view=summary&date_from={{ date_from }}&date_to={{ date_to }}&permit_type={{ type_f }}&status={{ status_f }}&risk_level={{ risk_f }}"
+           class="btn btn-success btn-sm">
+            <i class="bi bi-file-earmark-excel me-1"></i>Export Excel
+        </a>
+        {% else %}
+        <a href="{% url 'work_permit:report_excel' %}?view=detail&date_from={{ date_from }}&date_to={{ date_to }}&permit_type={{ type_f }}&status={{ status_f }}&risk_level={{ risk_f }}"
+           class="btn btn-success btn-sm">
+            <i class="bi bi-file-earmark-excel me-1"></i>Export Excel
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <div class="d-flex gap-3 flex-wrap align-items-center">
+
+            <!-- Summary / Detail toggle -->
+            <div class="btn-group" role="group">
+                <a class="btn btn-sm {% if view_mode == 'summary' %}btn-dark{% else %}btn-outline-dark{% endif %}"
+                   href="?date_from={{ date_from }}&date_to={{ date_to }}&permit_type={{ type_f }}&status={{ status_f }}&risk_level={{ risk_f }}&view=summary">
+                    Summary
+                </a>
+                <a class="btn btn-sm {% if view_mode != 'summary' %}btn-dark{% else %}btn-outline-dark{% endif %}"
+                   href="?date_from={{ date_from }}&date_to={{ date_to }}&permit_type={{ type_f }}&status={{ status_f }}&risk_level={{ risk_f }}&view=detail">
+                    Detail
+                </a>
+            </div>
+
+            <!-- Filters -->
+            <form method="get" class="d-flex gap-2 align-items-center flex-wrap">
+                <input type="hidden" name="view" value="{{ view_mode|default:'detail' }}">
+                <input type="date" name="date_from" value="{{ date_from }}" class="form-control form-control-sm" style="width:160px" placeholder="From">
+                <input type="date" name="date_to"   value="{{ date_to }}"   class="form-control form-control-sm" style="width:160px" placeholder="To">
+                <select name="permit_type" class="form-select form-select-sm" style="width:180px">
+                    <option value="">All Types</option>
+                    {% for code, label in permit_type_choices %}
+                    <option value="{{ code }}" {% if type_f == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <select name="status" class="form-select form-select-sm" style="width:150px">
+                    <option value="">All Status</option>
+                    <option value="draft"     {% if status_f == 'draft' %}selected{% endif %}>Draft</option>
+                    <option value="pending"   {% if status_f == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="approved"  {% if status_f == 'approved' %}selected{% endif %}>Approved</option>
+                    <option value="rejected"  {% if status_f == 'rejected' %}selected{% endif %}>Rejected</option>
+                    <option value="suspended" {% if status_f == 'suspended' %}selected{% endif %}>Suspended</option>
+                    <option value="closed"    {% if status_f == 'closed' %}selected{% endif %}>Closed</option>
+                    <option value="expired"   {% if status_f == 'expired' %}selected{% endif %}>Expired</option>
+                </select>
+                <select name="risk_level" class="form-select form-select-sm" style="width:130px">
+                    <option value="">All Risk</option>
+                    <option value="critical" {% if risk_f == 'critical' %}selected{% endif %}>Critical</option>
+                    <option value="high"     {% if risk_f == 'high' %}selected{% endif %}>High</option>
+                    <option value="medium"   {% if risk_f == 'medium' %}selected{% endif %}>Medium</option>
+                    <option value="low"      {% if risk_f == 'low' %}selected{% endif %}>Low</option>
+                </select>
+                <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+                <a href="{% url 'work_permit:report' %}?view={{ view_mode }}" class="btn btn-outline-secondary btn-sm">Clear</a>
+            </form>
+
+            <span class="text-muted small ms-auto">{{ permits.count }} record{{ permits.count|pluralize }}</span>
+        </div>
+    </div>
+</div>
+
+<!-- ===== SUMMARY VIEW ===== -->
+{% if view_mode == 'summary' %}
+<div class="row g-3 mb-3">
+    <!-- Total -->
+    <div class="col-12 col-md-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="text-muted small">Total Permits</div>
+                <div class="fw-bold fs-3">{{ summary.total }}</div>
+                <div class="text-muted small mt-1">Total Workers: <strong>{{ total_workers }}</strong></div>
+            </div>
+        </div>
+    </div>
+    <!-- By Status -->
+    <div class="col-12 col-md-3">
+        <div class="card h-100">
+            <div class="card-header fw-semibold">By Status</div>
+            <div class="card-body p-0">
+                <table class="table mb-0 small">
+                    <thead><tr><th>Status</th><th class="text-end">Count</th></tr></thead>
+                    <tbody>
+                    {% for label, val, cls in status_rows %}
+                    <tr>
+                        <td><span class="badge {{ cls }}">{{ label }}</span></td>
+                        <td class="text-end fw-semibold">{{ val }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <!-- By Risk -->
+    <div class="col-12 col-md-3">
+        <div class="card h-100">
+            <div class="card-header fw-semibold">By Risk Level</div>
+            <div class="card-body p-0">
+                <table class="table mb-0 small">
+                    <thead><tr><th>Risk</th><th class="text-end">Count</th></tr></thead>
+                    <tbody>
+                        <tr><td><span class="badge bg-danger">Critical</span></td><td class="text-end fw-semibold">{{ by_risk.critical }}</td></tr>
+                        <tr><td><span class="badge bg-warning text-dark">High</span></td><td class="text-end fw-semibold">{{ by_risk.high }}</td></tr>
+                        <tr><td><span class="badge bg-info text-dark">Medium</span></td><td class="text-end fw-semibold">{{ by_risk.medium }}</td></tr>
+                        <tr><td><span class="badge bg-success">Low</span></td><td class="text-end fw-semibold">{{ by_risk.low }}</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <!-- By Permit Type -->
+    <div class="col-12 col-md-3">
+        <div class="card h-100">
+            <div class="card-header fw-semibold">By Permit Type</div>
+            <div class="card-body p-0">
+                <table class="table mb-0 small">
+                    <thead><tr><th>Type</th><th class="text-end">Count</th></tr></thead>
+                    <tbody>
+                    {% for item in by_type %}
+                    <tr>
+                        <td>
+                            <span class="badge text-white" style="background:{{ item.color }}">
+                                <i class="bi {{ item.icon }} me-1"></i>{{ item.label|truncatechars:18 }}
+                            </span>
+                        </td>
+                        <td class="text-end fw-semibold">{{ item.count }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="2" class="text-center text-muted py-3">No data</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== DETAIL VIEW ===== -->
+{% else %}
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 small">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Permit No.</th>
+                        <th>Type</th>
+                        <th>Title</th>
+                        <th>Location</th>
+                        <th>Risk</th>
+                        <th>Status</th>
+                        <th>Requested By</th>
+                        <th>Dept.</th>
+                        <th>Workers</th>
+                        <th>Start</th>
+                        <th>End</th>
+                        <th>Contractor</th>
+                        <th>HOD</th>
+                        <th>Safety</th>
+                        <th>Final</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for p in permits %}
+                <tr>
+                    <td class="text-muted">{{ forloop.counter }}</td>
+                    <td><a href="{% url 'work_permit:detail' p.pk %}" class="fw-semibold text-decoration-none">{{ p.permit_number }}</a></td>
+                    <td>
+                        <span class="badge text-white" style="background:{{ p.type_color }};font-size:10px;">
+                            <i class="bi {{ p.type_icon }} me-1"></i>{{ p.get_permit_type_display|truncatechars:14 }}
+                        </span>
+                    </td>
+                    <td>{{ p.title|truncatechars:25 }}</td>
+                    <td>{{ p.location|truncatechars:18 }}</td>
+                    <td>
+                        {% if p.risk_level == 'critical' %}<span class="badge bg-danger">Critical</span>
+                        {% elif p.risk_level == 'high' %}<span class="badge bg-warning text-dark">High</span>
+                        {% elif p.risk_level == 'medium' %}<span class="badge bg-info text-dark">Medium</span>
+                        {% else %}<span class="badge bg-success">Low</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if p.status == 'approved' %}<span class="badge bg-success">Active</span>
+                        {% elif p.status == 'pending' %}<span class="badge bg-warning text-dark">Pending</span>
+                        {% elif p.status == 'draft' %}<span class="badge bg-secondary">Draft</span>
+                        {% elif p.status == 'rejected' %}<span class="badge bg-danger">Rejected</span>
+                        {% elif p.status == 'suspended' %}<span class="badge bg-dark">Suspended</span>
+                        {% elif p.status == 'closed' %}<span class="badge bg-secondary">Closed</span>
+                        {% elif p.status == 'expired' %}<span class="badge bg-danger">Expired</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ p.requested_by.employee_name }}</td>
+                    <td><small class="text-muted">{{ p.requested_by.department|truncatechars:16 }}</small></td>
+                    <td class="text-center">{{ p.workers_count }}</td>
+                    <td>{{ p.start_datetime|date:"d M Y" }}</td>
+                    <td>{{ p.end_datetime|date:"d M Y" }}</td>
+                    <td><small>{{ p.contractor_name|default:"—"|truncatechars:16 }}</small></td>
+                    <td class="text-center">
+                        {% if p.hod_approved_by %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if p.safety_approved_by %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if p.final_approved_by %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="16" class="text-center text-muted py-4">No records for selected filters.</td></tr>
+                {% endfor %}
+                </tbody>
+                {% if permits %}
+                <tfoot class="table-light fw-semibold">
+                    <tr>
+                        <td colspan="9" class="text-end small">Total Workers:</td>
+                        <td class="text-center">{{ total_workers }}</td>
+                        <td colspan="6"></td>
+                    </tr>
+                </tfoot>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

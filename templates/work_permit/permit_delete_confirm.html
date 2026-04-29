@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Delete Permit — {{ permit.permit_number }}{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width:480px">
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-danger text-white fw-semibold">
+      <i class="bi bi-trash me-2"></i>Delete Work Permit
+    </div>
+    <div class="card-body">
+      <p>Are you sure you want to permanently delete permit <strong>{{ permit.permit_number }}</strong>?</p>
+      <p class="text-muted small">{{ permit.title }} — {{ permit.location }}</p>
+      <div class="alert alert-danger py-2 small">
+        <i class="bi bi-exclamation-triangle me-1"></i>This action cannot be undone. All comments and extensions will also be deleted.
+      </div>
+      <form method="post" class="d-flex gap-2">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger"><i class="bi bi-trash me-1"></i>Yes, Delete</button>
+        <a href="{% url 'work_permit:detail' permit.pk %}" class="btn btn-outline-secondary">Cancel</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

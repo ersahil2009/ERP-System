@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}Work Permits — List{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h5 class="mb-0 fw-bold"><i class="bi bi-list-check me-2 text-danger"></i>Work Permits
+      <span class="badge bg-secondary ms-1" style="font-size:13px;">{{ page_obj.paginator.count }}</span>
+    </h5>
+    <div class="d-flex gap-2">
+      <a href="{% url 'work_permit:report' %}" class="btn btn-sm btn-outline-info">
+        <i class="bi bi-bar-chart me-1"></i>Reports
+      </a>
+      <a href="{% url 'work_permit:create' %}" class="btn btn-sm btn-danger">
+        <i class="bi bi-plus-circle me-1"></i>New Permit
+      </a>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <form method="get" class="card border-0 shadow-sm mb-3" id="filterForm">
+    <div class="card-body py-2">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm"
+                 placeholder="Search permit no., title, location…">
+        </div>
+        <div class="col-md-2">
+          <select name="permit_type" class="form-select form-select-sm">
+            <option value="">All Types</option>
+            {% for code, label in permit_type_choices %}
+            <option value="{{ code }}" {% if type_f == code %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <select name="status" class="form-select form-select-sm">
+            <option value="">All Status</option>
+            <option value="draft"     {% if status_f == 'draft' %}selected{% endif %}>Draft</option>
+            <option value="pending"   {% if status_f == 'pending' %}selected{% endif %}>Pending</option>
+            <option value="approved"  {% if status_f == 'approved' %}selected{% endif %}>Approved</option>
+            <option value="rejected"  {% if status_f == 'rejected' %}selected{% endif %}>Rejected</option>
+            <option value="suspended" {% if status_f == 'suspended' %}selected{% endif %}>Suspended</option>
+            <option value="closed"    {% if status_f == 'closed' %}selected{% endif %}>Closed</option>
+            <option value="expired"   {% if status_f == 'expired' %}selected{% endif %}>Expired</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <select name="risk_level" class="form-select form-select-sm">
+            <option value="">All Risk</option>
+            <option value="low"      {% if risk_f == 'low' %}selected{% endif %}>Low</option>
+            <option value="medium"   {% if risk_f == 'medium' %}selected{% endif %}>Medium</option>
+            <option value="high"     {% if risk_f == 'high' %}selected{% endif %}>High</option>
+            <option value="critical" {% if risk_f == 'critical' %}selected{% endif %}>Critical</option>
+          </select>
+        </div>
+        <div class="col-md-auto">
+          <button type="submit" class="btn btn-sm btn-primary">Filter</button>
+          <a href="{% url 'work_permit:list' %}" class="btn btn-sm btn-outline-secondary ms-1">Clear</a>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <!-- Bulk Action Form -->
+  <form method="post" id="bulkForm">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="bulk_delete">
+
+    <!-- Bulk Toolbar (hidden until selection) -->
+    {% if can_delete %}
+    <div id="bulkToolbar" class="d-none mb-2 d-flex align-items-center gap-2">
+      <span class="text-muted small fw-semibold" id="selectedCount">0 selected</span>
+      <button type="submit" class="btn btn-sm btn-danger"
+              onclick="return confirm('Permanently delete selected permits? This cannot be undone.')">
+        <i class="bi bi-trash me-1"></i>Delete Selected
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearSelection()">
+        <i class="bi bi-x me-1"></i>Clear
+      </button>
+    </div>
+    {% endif %}
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0 small">
+            <thead class="table-light">
+              <tr>
+                {% if can_delete %}
+                <th style="width:36px">
+                  <input type="checkbox" id="checkAll" class="form-check-input">
+                </th>
+                {% endif %}
+                <th>#</th>
+                <th>Permit No.</th>
+                <th>Type</th>
+                <th>Title / Location</th>
+                <th>Risk</th>
+                <th>Workers</th>
+                <th>Start</th>
+                <th>End</th>
+                <th>Status</th>
+                <th>Requested By</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in permits %}
+              <tr>
+                {% if can_delete %}
+                <td><input type="checkbox" name="selected_ids" value="{{ p.pk }}" class="form-check-input row-check"></td>
+                {% endif %}
+                <td class="text-muted">{{ page_obj.start_index|add:forloop.counter0 }}</td>
+                <td class="fw-semibold">
+                  <a href="{% url 'work_permit:detail' p.pk %}" class="text-decoration-none">{{ p.permit_number }}</a>
+                </td>
+                <td>
+                  <span class="badge text-white" style="background:{{ p.type_color }}">
+                    <i class="bi {{ p.type_icon }} me-1"></i>{{ p.get_permit_type_display|truncatechars:14 }}
+                  </span>
+                </td>
+                <td>
+                  <div>{{ p.title|truncatechars:28 }}</div>
+                  <small class="text-muted"><i class="bi bi-geo-alt me-1"></i>{{ p.location|truncatechars:22 }}</small>
+                </td>
+                <td>
+                  {% if p.risk_level == 'critical' %}<span class="badge bg-danger">Critical</span>
+                  {% elif p.risk_level == 'high' %}<span class="badge bg-warning text-dark">High</span>
+                  {% elif p.risk_level == 'medium' %}<span class="badge bg-info text-dark">Medium</span>
+                  {% else %}<span class="badge bg-success">Low</span>{% endif %}
+                </td>
+                <td class="text-center">{{ p.workers_count }}</td>
+                <td>{{ p.start_datetime|date:"d M Y" }}<br><small class="text-muted">{{ p.start_datetime|date:"H:i" }}</small></td>
+                <td>{{ p.end_datetime|date:"d M Y" }}<br><small class="text-muted">{{ p.end_datetime|date:"H:i" }}</small></td>
+                <td>
+                  {% if p.status == 'approved' %}<span class="badge bg-success">Active</span>
+                  {% elif p.status == 'pending' %}<span class="badge bg-warning text-dark">Pending</span>
+                  {% elif p.status == 'draft' %}<span class="badge bg-secondary">Draft</span>
+                  {% elif p.status == 'rejected' %}<span class="badge bg-danger">Rejected</span>
+                  {% elif p.status == 'suspended' %}<span class="badge bg-dark">Suspended</span>
+                  {% elif p.status == 'closed' %}<span class="badge bg-secondary">Closed</span>
+                  {% elif p.status == 'expired' %}<span class="badge bg-danger">Expired</span>
+                  {% endif %}
+                </td>
+                <td>{{ p.requested_by.employee_name }}</td>
+                <td>
+                  <div class="d-flex gap-1 flex-wrap">
+                    <a href="{% url 'work_permit:detail' p.pk %}" class="btn btn-xs btn-outline-primary py-0 px-2">
+                      <i class="bi bi-eye"></i>
+                    </a>
+                    {% if p.status == 'draft' and p.requested_by == request.user or request.user.is_superuser %}
+                    <a href="{% url 'work_permit:edit' p.pk %}" class="btn btn-xs btn-outline-secondary py-0 px-2">
+                      <i class="bi bi-pencil"></i>
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'work_permit:print' p.pk %}" target="_blank" class="btn btn-xs btn-outline-dark py-0 px-2">
+                      <i class="bi bi-printer"></i>
+                    </a>
+                  </div>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="{% if can_delete %}12{% else %}11{% endif %}" class="text-center text-muted py-5">No permits found.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <!-- Pagination -->
+  {% include 'pagination.html' %}
+
+</div>
+
+<script>
+{% if can_delete %}
+const checkAll   = document.getElementById('checkAll');
+const toolbar    = document.getElementById('bulkToolbar');
+const countLabel = document.getElementById('selectedCount');
+
+function updateToolbar() {
+  const checked = document.querySelectorAll('.row-check:checked');
+  toolbar.classList.toggle('d-none', checked.length === 0);
+  countLabel.textContent = checked.length + ' selected';
+  if (checkAll) checkAll.indeterminate = checked.length > 0 && checked.length < document.querySelectorAll('.row-check').length;
+}
+
+function clearSelection() {
+  document.querySelectorAll('.row-check').forEach(cb => cb.checked = false);
+  if (checkAll) checkAll.checked = false;
+  updateToolbar();
+}
+
+if (checkAll) {
+  checkAll.addEventListener('change', () => {
+    document.querySelectorAll('.row-check').forEach(cb => cb.checked = checkAll.checked);
+    updateToolbar();
+  });
+}
+document.querySelectorAll('.row-check').forEach(cb => cb.addEventListener('change', updateToolbar));
+{% endif %}
+</script>
+{% endblock %}

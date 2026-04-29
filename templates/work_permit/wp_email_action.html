@@ -1,0 +1,143 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WP Approval — {{ permit.permit_number }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        * { font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background: #f0f4f8; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .card { border: none; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.10); max-width: 700px; width: 100%; }
+        .card-header-custom { background: linear-gradient(135deg, #1e3a5f, #1e40af); color: white; border-radius: 16px 16px 0 0; padding: 28px 32px; }
+        .info-table td { padding: 7px 12px; font-size: 13px; border-bottom: 1px solid #f0f0f0; }
+        .info-table td:first-child { font-weight: 600; color: #1e3a5f; width: 38%; }
+        .info-table tr:last-child td { border-bottom: none; }
+        .stage-row { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; border-bottom: 1px solid #f5f5f5; }
+        .stage-row:last-child { border-bottom: none; }
+        .s-dot { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+        .s-dot.approved { background: #d1e7dd; color: #0f5132; }
+        .s-dot.rejected { background: #f8d7da; color: #842029; }
+        .s-dot.pending   { background: #fff3cd; color: #856404; }
+        .s-dot.current   { background: #cfe2ff; color: #084298; border: 2px solid #084298; }
+        .btn-approve { background: linear-gradient(135deg, #059669, #10b981); color: white; border: none; border-radius: 10px; padding: 14px 28px; font-size: 15px; font-weight: 700; width: 100%; }
+        .btn-approve:hover { opacity: .9; color: white; }
+        .btn-reject  { background: linear-gradient(135deg, #dc2626, #ef4444); color: white; border: none; border-radius: 10px; padding: 14px 28px; font-size: 15px; font-weight: 700; width: 100%; }
+        .btn-reject:hover  { opacity: .9; color: white; }
+        .remarks-box { border-radius: 10px; border: 1.5px solid #e2e8f0; font-size: 13px; padding: 10px 12px; width: 100%; resize: vertical; }
+        .remarks-box:focus { border-color: #1e3a5f; outline: none; box-shadow: 0 0 0 3px rgba(30,58,95,0.1); }
+        .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #1e3a5f; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+<div style="width:100%;max-width:700px;">
+    <div class="card">
+        <div class="card-header-custom">
+            <div style="font-size:11px;opacity:.6;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">Unity Cement — ERP System</div>
+            <div style="font-size:20px;font-weight:700;">Work Permit Approval</div>
+            <div style="font-size:13px;opacity:.8;margin-top:2px;">Stage {{ stage.stage|add:1 }}: {{ stage.stage_label }}</div>
+            <div style="display:inline-block;background:rgba(255,255,255,0.15);border-radius:20px;padding:3px 14px;margin-top:8px;font-size:13px;font-weight:600;">
+                {{ permit.permit_number }}
+            </div>
+        </div>
+
+        <div class="card-body p-4">
+            <div class="row g-4">
+                <!-- Permit Details -->
+                <div class="col-md-6">
+                    <div class="section-title"><i class="bi bi-file-earmark-check me-1"></i>Permit Details</div>
+                    <table class="info-table w-100">
+                        <tr><td>Permit No.</td><td><strong>{{ permit.permit_number }}</strong></td></tr>
+                        <tr><td>Type</td><td>{{ permit.get_permit_type_display }}</td></tr>
+                        <tr><td>Title</td><td>{{ permit.title }}</td></tr>
+                        <tr><td>Location</td><td>{{ permit.location }}</td></tr>
+                        <tr><td>Risk Level</td><td>{{ permit.get_risk_level_display }}</td></tr>
+                        <tr><td>Requested By</td><td>{{ permit.requested_by.employee_name }}</td></tr>
+                        <tr><td>Department</td><td>{{ permit.requested_by.department }}</td></tr>
+                        <tr><td>Start</td><td>{{ permit.start_datetime|date:"d M Y H:i" }}</td></tr>
+                        <tr><td>End</td><td>{{ permit.end_datetime|date:"d M Y H:i" }}</td></tr>
+                        <tr><td>Isolation</td><td>{% if permit.isolation_required %}<span class="badge bg-danger">Yes</span>{% else %}No{% endif %}</td></tr>
+                        <tr><td>MOC</td><td>{% if permit.moc_required %}<span class="badge bg-warning text-dark">Yes</span>{% else %}No{% endif %}</td></tr>
+                    </table>
+                </div>
+
+                <!-- Workflow Stages -->
+                <div class="col-md-6">
+                    <div class="section-title"><i class="bi bi-diagram-3 me-1"></i>Approval Workflow</div>
+                    {% for s in stages %}
+                    <div class="stage-row">
+                        <div class="s-dot {% if s.pk == stage.pk %}current{% else %}{{ s.status }}{% endif %}">
+                            {% if s.pk == stage.pk %}<i class="bi bi-pencil" style="font-size:10px;"></i>
+                            {% elif s.status == 'approved' %}<i class="bi bi-check-lg"></i>
+                            {% elif s.status == 'rejected' %}<i class="bi bi-x-lg"></i>
+                            {% else %}<i class="bi bi-hourglass-split" style="font-size:10px;"></i>{% endif %}
+                        </div>
+                        <div class="flex-grow-1">
+                            <div style="font-size:12px;font-weight:600;color:#1e3a5f;">
+                                Stage {{ s.stage|add:1 }}: {{ s.stage_label }}
+                                {% if s.pk == stage.pk %}<span style="background:#cfe2ff;color:#084298;font-size:10px;padding:1px 7px;border-radius:10px;margin-left:4px;">CURRENT</span>{% endif %}
+                            </div>
+                            <div style="font-size:11px;color:#718096;">
+                                {% if s.approver %}{{ s.approver.employee_name }}{% else %}Awaiting{% endif %}
+                                &mdash; <span style="font-weight:600;">{{ s.status|upper }}</span>
+                            </div>
+                            {% if s.remarks %}<div style="font-size:11px;color:#94a3b8;font-style:italic;">{{ s.remarks }}</div>{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <div class="section-title"><i class="bi bi-shield-check me-1"></i>Your Decision</div>
+            <div class="mb-3">
+                <label style="font-size:13px;font-weight:600;color:#2d3748;display:block;margin-bottom:6px;">
+                    Remarks <span style="font-weight:400;color:#718096;">(optional)</span>
+                </label>
+                <textarea id="shared-remarks" class="remarks-box" rows="3" placeholder="Add your remarks here..."></textarea>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-6">
+                    <form method="post" id="form-approve">
+                        {% csrf_token %}
+                        <input type="hidden" name="remarks" id="remarks-approve">
+                        <input type="hidden" name="action_choice" value="approve">
+                        <button type="submit" class="btn-approve" onclick="syncRemarks('remarks-approve')">
+                            <i class="bi bi-check-lg me-2"></i>APPROVE
+                        </button>
+                    </form>
+                </div>
+                <div class="col-6">
+                    <form method="post" id="form-reject">
+                        {% csrf_token %}
+                        <input type="hidden" name="remarks" id="remarks-reject">
+                        <input type="hidden" name="action_choice" value="reject">
+                        <button type="submit" class="btn-reject" onclick="syncRemarks('remarks-reject')">
+                            <i class="bi bi-x-lg me-2"></i>REJECT
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <p style="font-size:11px;color:#a0aec0;text-align:center;margin-top:12px;">
+                <i class="bi bi-info-circle me-1"></i>Your decision will be recorded and the initiator will be notified.
+            </p>
+        </div>
+    </div>
+    <div style="text-align:center;font-size:11px;color:rgba(0,0,0,0.35);margin-top:16px;">ERP System — Unity Cement &copy; 2026</div>
+</div>
+
+<script>
+    function syncRemarks(targetId) {
+        document.getElementById(targetId).value = document.getElementById('shared-remarks').value;
+    }
+    document.getElementById('form-reject').addEventListener('submit', function(e) {
+        if (!confirm('Are you sure you want to REJECT this Work Permit?')) e.preventDefault();
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% load dict_extras %}
+
+{% block title %}Work Permit System — Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+  <!-- Header -->
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h4 class="mb-0 fw-bold"><i class="bi bi-shield-check me-2 text-danger"></i>Work Permit System</h4>
+      <small class="text-muted">ISO 45001 Compliant — Cement Industry PTW Module</small>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'work_permit:list' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-list-ul me-1"></i>All Permits
+      </a>
+      <a href="{% url 'work_permit:report' %}" class="btn btn-outline-info btn-sm">
+        <i class="bi bi-bar-chart me-1"></i>Reports
+      </a>
+      <a href="{% url 'work_permit:create' %}" class="btn btn-danger btn-sm">
+        <i class="bi bi-plus-circle me-1"></i>New Permit
+      </a>
+    </div>
+  </div>
+
+  <!-- Stats Row -->
+  <div class="row g-3 mb-4">
+    {% with cards=stats %}
+    <div class="col-6 col-md-3 col-xl-2">
+      <div class="card border-0 shadow-sm h-100 text-center">
+        <div class="card-body py-3">
+          <div class="fs-2 fw-bold text-primary">{{ stats.total }}</div>
+          <div class="small text-muted">Total Permits</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+      <div class="card border-0 shadow-sm h-100 text-center border-start border-success border-3">
+        <div class="card-body py-3">
+          <div class="fs-2 fw-bold text-success">{{ stats.active }}</div>
+          <div class="small text-muted">Active</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+      <div class="card border-0 shadow-sm h-100 text-center border-start border-warning border-3">
+        <div class="card-body py-3">
+          <div class="fs-2 fw-bold text-warning">{{ stats.pending }}</div>
+          <div class="small text-muted">Pending</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+      <div class="card border-0 shadow-sm h-100 text-center border-start border-secondary border-3">
+        <div class="card-body py-3">
+          <div class="fs-2 fw-bold text-secondary">{{ stats.draft }}</div>
+          <div class="small text-muted">Draft</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+      <div class="card border-0 shadow-sm h-100 text-center border-start border-danger border-3">
+        <div class="card-body py-3">
+          <div class="fs-2 fw-bold text-danger">{{ stats.expired }}</div>
+          <div class="small text-muted">Expired</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+      <div class="card border-0 shadow-sm h-100 text-center border-start border-dark border-3">
+        <div class="card-body py-3">
+          <div class="fs-2 fw-bold text-dark">{{ stats.closed }}</div>
+          <div class="small text-muted">Closed</div>
+        </div>
+      </div>
+    </div>
+    {% endwith %}
+  </div>
+
+  <div class="row g-4">
+    <!-- Permit Type Cards -->
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom fw-semibold">
+          <i class="bi bi-grid-3x3-gap me-2"></i>Permit Types — Cement Industry
+        </div>
+        <div class="card-body">
+          <div class="row g-2">
+            {% for code, label in permit_type_choices %}
+            <div class="col-6 col-md-4 col-xl-3">
+              <a href="{% url 'work_permit:list' %}?permit_type={{ code }}"
+                 class="text-decoration-none">
+                <div class="p-3 rounded-3 text-white d-flex align-items-center gap-2"
+                     style="background:{% if code == 'hot_work' %}#dc2626{% elif code == 'cold_work' %}#2563eb{% elif code == 'height_work' %}#d97706{% elif code == 'confined_space' %}#7c3aed{% elif code == 'electrical' %}#f59e0b{% elif code == 'excavation' %}#92400e{% elif code == 'radiography' %}#be185d{% elif code == 'chemical' %}#065f46{% elif code == 'crane_lifting' %}#1e40af{% elif code == 'demolition' %}#991b1b{% elif code == 'pressure_test' %}#0e7490{% else %}#374151{% endif %}">
+                  <i class="bi {% if code == 'hot_work' %}bi-fire{% elif code == 'cold_work' %}bi-snow{% elif code == 'height_work' %}bi-ladder{% elif code == 'confined_space' %}bi-circle-square{% elif code == 'electrical' %}bi-lightning-charge-fill{% elif code == 'excavation' %}bi-tools{% elif code == 'radiography' %}bi-radioactive{% elif code == 'chemical' %}bi-droplet-fill{% elif code == 'crane_lifting' %}bi-arrow-up-square-fill{% elif code == 'demolition' %}bi-building-x{% elif code == 'pressure_test' %}bi-speedometer2{% else %}bi-truck-front-fill{% endif %} fs-5"></i>
+                  <div>
+                    <div class="small fw-semibold lh-sm">{{ label }}</div>
+                    <div class="opacity-75" style="font-size:.7rem">
+                      {% for t, d in by_type.items %}{% if t == code %}{{ d.count }} permit{{ d.count|pluralize }}{% endif %}{% endfor %}
+                    </div>
+                  </div>
+                </div>
+              </a>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Permits -->
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white border-bottom fw-semibold">
+          <i class="bi bi-check-circle-fill text-success me-2"></i>Active Permits
+        </div>
+        <div class="card-body p-0">
+          {% if active_permits %}
+          <ul class="list-group list-group-flush">
+            {% for p in active_permits %}
+            <li class="list-group-item px-3 py-2">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <a href="{% url 'work_permit:detail' p.pk %}" class="fw-semibold text-decoration-none small">
+                    {{ p.permit_number }}
+                  </a>
+                  <div class="text-muted" style="font-size:.75rem">{{ p.title|truncatechars:35 }}</div>
+                </div>
+                <span class="badge text-white" style="background:{{ p.type_color }};font-size:.65rem">
+                  {{ p.get_permit_type_display|truncatechars:12 }}
+                </span>
+              </div>
+              <div class="text-muted mt-1" style="font-size:.7rem">
+                <i class="bi bi-clock me-1"></i>Expires: {{ p.end_datetime|date:"d M Y H:i" }}
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <div class="text-center text-muted py-4">
+            <i class="bi bi-check2-all fs-3 d-block mb-2"></i>No active permits
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Permits Table -->
+  <div class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+      <span class="fw-semibold"><i class="bi bi-clock-history me-2"></i>Recent Permits</span>
+      <a href="{% url 'work_permit:list' %}" class="btn btn-sm btn-outline-secondary">View All</a>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light">
+            <tr>
+              <th>Permit No.</th>
+              <th>Type</th>
+              <th>Title</th>
+              <th>Location</th>
+              <th>Risk</th>
+              <th>Status</th>
+              <th>Requested By</th>
+              <th>Start</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in recent %}
+            <tr>
+              <td><a href="{% url 'work_permit:detail' p.pk %}" class="fw-semibold text-decoration-none">{{ p.permit_number }}</a></td>
+              <td>
+                <span class="badge text-white" style="background:{{ p.type_color }}">
+                  <i class="bi {{ p.type_icon }} me-1"></i>{{ p.get_permit_type_display|truncatechars:14 }}
+                </span>
+              </td>
+              <td>{{ p.title|truncatechars:30 }}</td>
+              <td>{{ p.location|truncatechars:20 }}</td>
+              <td>
+                {% if p.risk_level == 'critical' %}<span class="badge bg-danger">Critical</span>
+                {% elif p.risk_level == 'high' %}<span class="badge bg-warning text-dark">High</span>
+                {% elif p.risk_level == 'medium' %}<span class="badge bg-info text-dark">Medium</span>
+                {% else %}<span class="badge bg-success">Low</span>{% endif %}
+              </td>
+              <td>
+                {% if p.status == 'approved' %}<span class="badge bg-success">Active</span>
+                {% elif p.status == 'pending' %}<span class="badge bg-warning text-dark">Pending</span>
+                {% elif p.status == 'draft' %}<span class="badge bg-secondary">Draft</span>
+                {% elif p.status == 'rejected' %}<span class="badge bg-danger">Rejected</span>
+                {% elif p.status == 'suspended' %}<span class="badge bg-dark">Suspended</span>
+                {% elif p.status == 'closed' %}<span class="badge bg-secondary">Closed</span>
+                {% elif p.status == 'expired' %}<span class="badge bg-danger">Expired</span>
+                {% endif %}
+              </td>
+              <td>{{ p.requested_by.employee_name }}</td>
+              <td>{{ p.start_datetime|date:"d M Y" }}</td>
+              <td><a href="{% url 'work_permit:detail' p.pk %}" class="btn btn-sm btn-outline-primary py-0">View</a></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="9" class="text-center text-muted py-4">No permits found.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block title %}{% if is_edit %}Edit{% else %}New{% endif %} Work Permit{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+  <div class="d-flex align-items-center mb-3">
+    <a href="{% url 'work_permit:list' %}" class="btn btn-sm btn-outline-secondary me-3">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <h5 class="mb-0 fw-bold">
+      <i class="bi bi-file-earmark-plus me-2 text-danger"></i>
+      {% if is_edit %}Edit Permit — {{ permit.permit_number }}{% else %}New Work Permit{% endif %}
+    </h5>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" id="permitForm">
+    {% csrf_token %}
+    <div class="row g-4">
+
+      <!-- Left Column -->
+      <div class="col-lg-8">
+
+        <!-- Basic Info -->
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-header bg-danger text-white fw-semibold">
+            <i class="bi bi-info-circle me-2"></i>Permit Information
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Permit Type <span class="text-danger">*</span></label>
+                {{ form.permit_type }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Risk Level <span class="text-danger">*</span></label>
+                {{ form.risk_level }}
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold">Work Description / Title <span class="text-danger">*</span></label>
+                {{ form.title }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Work Location / Area <span class="text-danger">*</span></label>
+                {{ form.location }}
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-semibold">Equipment / Tag No.</label>
+                {{ form.equipment_tag }}
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-semibold">Plant Area / Unit</label>
+                {{ form.plant_area }}
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-semibold">Planned Start <span class="text-danger">*</span></label>
+                {{ form.start_datetime }}
+              </div>
+              <div class="col-md-3">
+                <div class="form-check mt-4 pt-2">
+                  {{ form.renewal_required }}
+                  <label class="form-check-label fw-semibold" for="{{ form.renewal_required.id_for_label }}">
+                    Permit Renewal Required
+                  </label>
+                </div>
+                <small class="text-muted d-block">If unchecked, permit auto-closes at midnight. If checked, valid for 7 days then auto-closes at midnight.</small>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-semibold">Shift</label>
+                {{ form.shift }}
+              </div>
+              <div class="col-md-3">
+                <label class="form-label fw-semibold">No. of Workers</label>
+                {{ form.workers_count }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Personnel -->
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-header bg-primary text-white fw-semibold">
+            <i class="bi bi-people me-2"></i>Personnel Details
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Contractor / Agency Name</label>
+                {{ form.contractor_name }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Contractor Supervisor</label>
+                {{ form.contractor_supervisor }}
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold">Worker Names / IDs</label>
+                {{ form.workers_names }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Safety -->
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-header bg-warning text-dark fw-semibold">
+            <i class="bi bi-exclamation-triangle me-2"></i>Hazard & Safety Controls
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Identified Hazards</label>
+                {{ form.hazards }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Safety Precautions / Controls</label>
+                {{ form.precautions }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">PPE Required</label>
+                {{ form.ppe_required }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Emergency Procedure</label>
+                {{ form.emergency_procedure }}
+              </div>
+              <div class="col-md-6">
+                <div class="form-check mt-2">
+                  {{ form.gas_test_required }}
+                  <label class="form-check-label fw-semibold" for="{{ form.gas_test_required.id_for_label }}">
+                    Gas Test Required
+                  </label>
+                </div>
+                <div class="mt-2">
+                  <label class="form-label">Gas Test Result</label>
+                  {{ form.gas_test_result }}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-check mt-2">
+                  {{ form.isolation_required }}
+                  <label class="form-check-label fw-semibold" for="{{ form.isolation_required.id_for_label }}">
+                    Isolation / LOTO Required
+                  </label>
+                </div>
+                <div class="mt-2">
+                  <label class="form-label">Isolation Details</label>
+                  {{ form.isolation_details }}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-check mt-2">
+                  {{ form.moc_required }}
+                  <label class="form-check-label fw-semibold" for="{{ form.moc_required.id_for_label }}">
+                    MOC (Management of Change) Required
+                  </label>
+                </div>
+                <small class="text-muted d-block mt-1">Check if this work involves a Management of Change process.</small>
+                <div id="mocDetailsWrapper" class="mt-2" style="display:none">
+                  <label class="form-label fw-semibold">MOC Details <span class="text-danger">*</span></label>
+                  {{ form.moc_details }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Attachment -->
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-header bg-secondary text-white fw-semibold">
+            <i class="bi bi-paperclip me-2"></i>Supporting Document
+          </div>
+          <div class="card-body">
+            {{ form.attachment }}
+            {% if is_edit and permit.attachment %}
+            <div class="mt-2 small text-muted">
+              Current: <a href="{{ permit.attachment.url }}" target="_blank">{{ permit.attachment.name }}</a>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right Column — ISO Checklist -->
+      <div class="col-lg-4">
+        <div class="card border-0 shadow-sm sticky-top" style="top:70px">
+          <div class="card-header bg-success text-white fw-semibold d-flex align-items-center justify-content-between">
+            <span><i class="bi bi-clipboard2-check me-2"></i>ISO 45001 Safety Checklist</span>
+            <div class="d-flex align-items-center gap-2">
+              <button type="button" class="btn btn-sm btn-light text-success fw-semibold py-0 px-2" id="checkAllBtn" onclick="checkAll()" style="display:none!important;font-size:11px;">&#10003; Check All</button>
+              <span class="badge bg-white text-success" id="checklistScore">—</span>
+            </div>
+          </div>
+          <div class="card-body p-0" id="checklistContainer">
+            <div class="text-center text-muted py-4">
+              <i class="bi bi-arrow-left-circle fs-3 d-block mb-2"></i>
+              Select a permit type to load the checklist
+            </div>
+          </div>
+          <div class="card-footer bg-light small text-muted">
+            <i class="bi bi-info-circle me-1"></i>
+            All checklist items must be verified before permit activation per ISO 45001:2018
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Submit -->
+    <div class="d-flex gap-2 mt-2 mb-5">
+      <button type="submit" name="save_draft" class="btn btn-secondary">
+        <i class="bi bi-floppy me-1"></i>Save as Draft
+      </button>
+      <button type="submit" name="save_submit" class="btn btn-danger">
+        <i class="bi bi-send me-1"></i>Save & Submit for Approval
+      </button>
+      <a href="{% url 'work_permit:list' %}" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+
+  </form>
+</div>
+
+<script>
+const CHECKLIST_API = "{% url 'work_permit:checklist_api' %}";
+const savedChecklist = {{ permit.checklist_data|default:"{}" }};
+
+function loadChecklist(ptype) {
+  if (!ptype) {
+    document.getElementById('checklistContainer').innerHTML =
+      '<div class="text-center text-muted py-4"><i class="bi bi-arrow-left-circle fs-3 d-block mb-2"></i>Select a permit type</div>';
+    document.getElementById('checklistScore').textContent = '—';
+    return;
+  }
+  fetch(`${CHECKLIST_API}?type=${ptype}`)
+    .then(r => r.json())
+    .then(data => {
+      const items = data.items;
+      if (!items.length) {
+        document.getElementById('checklistContainer').innerHTML =
+          '<div class="text-center text-muted py-3">No checklist for this type.</div>';
+        return;
+      }
+      let html = '<ul class="list-group list-group-flush">';
+      items.forEach(item => {
+        const checked = savedChecklist[item.key] ? 'checked' : '';
+        html += `<li class="list-group-item px-3 py-2">
+          <div class="form-check">
+            <input class="form-check-input chk-item" type="checkbox" name="chk_${item.key}"
+                   id="chk_${item.key}" ${checked}>
+            <label class="form-check-label small" for="chk_${item.key}">${item.label}</label>
+          </div>
+        </li>`;
+      });
+      html += '</ul>';
+      document.getElementById('checklistContainer').innerHTML = html;
+      updateScore();
+      document.querySelectorAll('.chk-item').forEach(cb => cb.addEventListener('change', updateScore));
+      document.getElementById('checkAllBtn').style.removeProperty('display');
+    });
+}
+
+function updateScore() {
+  const all = document.querySelectorAll('.chk-item');
+  const checked = document.querySelectorAll('.chk-item:checked');
+  if (!all.length) return;
+  const pct = Math.round(checked.length / all.length * 100);
+  document.getElementById('checklistScore').textContent = `${checked.length}/${all.length} (${pct}%)`;
+}
+
+function checkAll() {
+  document.querySelectorAll('.chk-item').forEach(cb => { cb.checked = true; });
+  updateScore();
+}
+
+const typeSelect = document.getElementById('id_permit_type');
+typeSelect.addEventListener('change', () => {
+  document.getElementById('checkAllBtn').style.display = 'none';
+  loadChecklist(typeSelect.value);
+});
+
+// MOC details toggle
+const mocChk = document.getElementById('{{ form.moc_required.id_for_label }}');
+const mocWrapper = document.getElementById('mocDetailsWrapper');
+function toggleMoc() { mocWrapper.style.display = mocChk.checked ? '' : 'none'; }
+mocChk.addEventListener('change', toggleMoc);
+toggleMoc();
+
+{% if is_edit %}
+loadChecklist('{{ permit.permit_type }}');
+{% else %}
+if (typeSelect.value) loadChecklist(typeSelect.value);
+{% endif %}
+</script>
+{% endblock %}
