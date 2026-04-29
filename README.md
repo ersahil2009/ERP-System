@@ -5,7 +5,7 @@
 **Organization:** Cement Industry | **Standard:** ISO 45001:2018  
 **Stack:** Django 4.2.7 · Python 3.13 · MySQL · Bootstrap 5
 **Last Updated:** 2025  
-**Server:** LAN — `http://192.168.113.161:8000`
+**Server:** LAN — `Your Hosting IP`
 
 ---
 
@@ -591,4 +591,4 @@ erp system/
 
 ---
 
-*Blueprint v2.3 — Unity Cement ERP System · Django 4.2.7 · Python 3.13 · MySQL*
+*Blueprint v2.3 — ERP System · Django 4.2.7 · Python 3.13 · MySQL*
